@@ -1,0 +1,61 @@
+// The metric dictionary (docs/metrics.json) is the single source for captions,
+// flip panels and the Dictionary page.
+import raw from '../../docs/metrics.json';
+
+export type Tier = 'north-star' | 'decision' | 'guardrail' | 'diagnostic';
+export type LensKey = 'business' | 'technical' | 'ai';
+export interface MetricDef {
+  id: string;
+  section: string;
+  name: string;
+  tier: Tier;
+  lens: LensKey;
+  views: string;
+  question: string;
+  why: string;
+  decision: string;
+  chart: string;
+  chart_why: string;
+  definition: string;
+  formula: string;
+  events: string;
+  refresh: string;
+  alert: string;
+  sample: string;
+}
+export interface SectionDef { id: string; title: string; purpose: string }
+export interface UserOnlyDef { id: string; name: string; question: string; chart: string; chart_why: string }
+
+export const SECTIONS = raw.sections as SectionDef[];
+export const METRICS = raw.metrics as MetricDef[];
+export const USER_ONLY = raw.user_only as UserOnlyDef[];
+export const metric = (id: string): MetricDef => METRICS.find((m) => m.id === id)!;
+
+export type Stage = 'pulse' | 'adoption' | 'intake' | 'enrich' | 'hearing' | 'ai' | 'value' | 'health';
+/** Colour of each lifecycle stage (pulse borrows the north star's hearing colour). */
+export const STAGE_COLOR: Record<Stage, string> = {
+  pulse: 'hearing', adoption: 'adoption', intake: 'intake', enrich: 'enrich', hearing: 'hearing', ai: 'ai', value: 'value', health: 'health',
+};
+/** Pulse metrics take the colour of the stage they measure. */
+export const METRIC_STAGE: Record<string, Stage> = {
+  M01: 'hearing', M02: 'adoption', M03: 'ai', M04: 'health', M05: 'enrich',
+};
+export const stageOf = (id: string): Stage => METRIC_STAGE[id] ?? (metric(id)?.section as Stage) ?? 'pulse';
+
+export const TIER_LABEL: Record<Tier, string> = { 'north-star': 'North star', decision: 'Decision', guardrail: 'Guardrail', diagnostic: 'Diagnostic' };
+export const LENS_LABEL: Record<LensKey, string> = { business: 'Business', technical: 'Tech', ai: 'AI' };
+export const lensMatches = (lens: 'all' | 'business' | 'tech', l: LensKey) => lens === 'all' || (lens === 'business' ? l === 'business' : l !== 'business');
+
+/**
+ * Where the sample data needs a precise reading of a definition, we say so on the card.
+ * Each note keeps the dictionary's intent and makes the computation reproducible.
+ */
+export const DEFINITION_NOTES: Record<string, string> = {
+  M01: 'Lag is counted from the start of the hearing day. "Within 2 days" means recorded by the end of the second calendar day after the hearing, so a 2.6-day lag still counts as closed out.',
+  M04: 'Shown as the average of the last 7 daily checks, so small court types such as the Supreme Court (12 cases) are not reduced to whole-case steps.',
+  M06: 'Computed the standard rolling way: each day, that day\'s users divided by the users of the 30 days ending that day, averaged over the last 30 days.',
+  M08: 'Window: suggestions resolved in the last 90 days (triaged in the window, or expired in it after 90 untouched days).',
+  M13: 'Median over hearings in the period with an outcome recorded. Hearings still awaiting an update appear in M14.',
+  M16: 'Base: the 33 Legal and Lawyer users active in the last 7 days.',
+  M20: 'Window: the selected period.',
+};

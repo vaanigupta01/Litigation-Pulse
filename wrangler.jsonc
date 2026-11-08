@@ -1,0 +1,15 @@
+// Cloudflare Workers static-assets deploy. Workers Builds runs `npx wrangler deploy`,
+// which runs the build below (generate data, run consistency tests, vite build) and
+// uploads ./dist. A failing consistency test fails the deploy.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "litigation-pulse",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  },
+  "build": {
+    "command": "npm run build"
+  }
+}

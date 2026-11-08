@@ -1,0 +1,193 @@
+@import 'tailwindcss';
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  --canvas: #f6f6fa;
+  --surface: #ffffff;
+  --surface-2: #fafafd;
+  --ink: #14151f;
+  --muted: #6b6e80;
+  --hairline: #e6e7ef;
+  --intake: #4f5bd5;
+  --enrich: #0e9c8e;
+  --hearing: #ef5b3f;
+  --ai: #8b5cf6;
+  --value: #d9931f;
+  --health: #3e7cb1;
+  --adoption: #c2417e;
+  --good: #1e9e6a;
+  --watch: #e08a1e;
+  --act: #d64545;
+  --quiet: rgba(107, 110, 128, 0.35);
+  --shadow: 0 1px 2px rgba(20, 21, 31, 0.04), 0 8px 24px rgba(20, 21, 31, 0.04);
+  --glass: rgba(255, 255, 255, 0.8);
+  color-scheme: light;
+}
+[data-theme='dark'] {
+  --canvas: #0e0f14;
+  --surface: #16171f;
+  --surface-2: #1b1c25;
+  --ink: #ecedf3;
+  --muted: #9a9db0;
+  --hairline: #262836;
+  --intake: #8b93f0;
+  --enrich: #4fd1c1;
+  --hearing: #ff8a70;
+  --ai: #b79bff;
+  --value: #f2bc5c;
+  --health: #7db3e0;
+  --adoption: #ee7db0;
+  --good: #4cc790;
+  --watch: #f2a94a;
+  --act: #f07070;
+  --quiet: rgba(154, 157, 176, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --glass: rgba(22, 23, 31, 0.8);
+  color-scheme: dark;
+}
+
+@theme {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-intake: var(--intake);
+  --color-enrich: var(--enrich);
+  --color-hearing: var(--hearing);
+  --color-ai: var(--ai);
+  --color-value: var(--value);
+  --color-health: var(--health);
+  --color-adoption: var(--adoption);
+  --color-good: var(--good);
+  --color-watch: var(--watch);
+  --color-act: var(--act);
+}
+
+html {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: 'tnum' 1, 'cv11' 1;
+}
+body {
+  margin: 0;
+  background: var(--canvas);
+  overflow-x: hidden;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.card {
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+.serif {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.focus-ring:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--intake);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* flip card */
+.flip {
+  perspective: 1600px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 300ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  height: 100%;
+}
+.flip.is-flipped .flip-inner {
+  transform: rotateY(180deg);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  height: 100%;
+}
+.flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  overflow: auto;
+}
+
+/* "Show me" pulse */
+@keyframes pulse-border {
+  0%,
+  100% {
+    box-shadow: var(--shadow), 0 0 0 0 transparent;
+  }
+  25%,
+  75% {
+    box-shadow: var(--shadow), 0 0 0 3px var(--pulse, var(--intake));
+  }
+  50% {
+    box-shadow: var(--shadow), 0 0 0 0 transparent;
+  }
+}
+.pulse {
+  animation: pulse-border 1.4s ease-in-out 1;
+}
+
+/* mesh gradient behind the three signals */
+.mesh {
+  background:
+    radial-gradient(40% 60% at 12% 20%, color-mix(in srgb, var(--hearing) 9%, transparent), transparent 70%),
+    radial-gradient(35% 55% at 50% 0%, color-mix(in srgb, var(--ai) 9%, transparent), transparent 70%),
+    radial-gradient(40% 60% at 88% 30%, color-mix(in srgb, var(--intake) 9%, transparent), transparent 70%),
+    radial-gradient(40% 50% at 60% 100%, color-mix(in srgb, var(--value) 7%, transparent), transparent 70%);
+}
+
+.recharts-wrapper,
+.recharts-surface {
+  outline: none;
+}
+.recharts-cartesian-grid-horizontal line {
+  stroke-dasharray: 2 4;
+}
+.drill-mark {
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner {
+    transition: none;
+  }
+  .pulse {
+    animation: none;
+    outline: 3px solid var(--pulse, var(--intake));
+  }
+  html {
+    scroll-behavior: auto !important;
+  }
+}
+
+::selection {
+  background: color-mix(in srgb, var(--intake) 25%, transparent);
+}

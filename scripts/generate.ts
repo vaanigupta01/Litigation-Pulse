@@ -158,7 +158,7 @@ for (const team of BUS) {
     else {
       const k = i - bizWau[team.id];
       const r = h01(name + 'k');
-      last = r < 0.42 ? W30 + Math.floor(h01(name + 'a') * 23) : r < 0.82 ? DATA_START + 3 + Math.floor(h01(name + 'b') * (W30 - DATA_START - 4)) : null;
+      last = r < 0.2 ? W30 + Math.floor(h01(name + 'a') * 23) : r < 0.82 ? DATA_START + 3 + Math.floor(h01(name + 'b') * (W30 - DATA_START - 4)) : null;
       if (k === 0) last = D('2026-10-30');
     }
     bizByBu[team.id].push(addUser(name, 'Business', pick(bizTitles[team.id]), team, wau, last));
@@ -573,11 +573,13 @@ for (const c of cells) {
     const mehraShare = mid < AUG1 ? 0.15 : Math.min(0.38, 0.15 + ((mid - AUG1) / 28) * 0.23);
     const quotas: [string, number][] = [['mehra', Math.round(n * mehraShare)], ['inhouse', Math.round(n * 0.27)]];
     quotas.push(['other', n - quotas[0][1] - quotas[1][1]]);
-    for (const [g, q] of quotas) {
+    const days = range(ws, ws + 5).filter((d) => d < W30);
+    if (!days.length) continue;
+    for (const [g, q0] of quotas) {
+      const q = Math.round((q0 * days.length) / 6);
       let placed = 0, guard = 0;
       while (placed < q && guard++ < 4000) {
-        const d = ws + ri(0, 5);
-        if (d >= W30) break;
+        const d = pick(days);
         const m = pick(cand);
         if (!activeOn(m, d) || D(m.tracked_on) >= d) continue;
         const f = ownerFirmOn(m, d);
@@ -603,8 +605,11 @@ const awaitingCap = new Map<string, number>();
 for (const c of cells) {
   const hs = [...cellHearings.get(c)!].sort((a, b) => D(a.date) - D(b.date));
   const late = c.n - c.closed - c.awaiting;
-  hs.slice(0, late).forEach((h) => cellStatus.set(h, 'late'));
-  const restH = shuffle(hs.slice(late));
+  // late outcomes need room to be recorded: pick them from the earlier three quarters of the cell, spread out
+  const early = hs.slice(0, Math.max(late, Math.ceil(hs.length * (c.owner === MEHRA ? 0.5 : 0.75))));
+  const lateSet = new Set(shuffle(early).slice(0, late));
+  hs.filter((h) => lateSet.has(h)).forEach((h) => cellStatus.set(h, 'late'));
+  const restH = shuffle(hs.filter((h) => !lateSet.has(h)));
   let aw = 0;
   for (const h of restH) {
     const mgr = mById.get(h.matter_id)!.case_manager_id;
@@ -638,12 +643,12 @@ for (const [owner, t] of [[null, 1.1], [SUBRA, 1.8], [DESAI, 2.1], [BANER, 2.6],
   const karanH = hsOf((c) => c.owner === MEHRA && c.karan === true);
   const k = groupCounts(karanH); // 8 closed, 14 late
   assert(k.c === 8 && k.l === 14, 'karan counts');
-  const kLate = [r1(rf(9.5, 10.4)), r1(rf(10.5, 11.1)), 11.2, 11.2, ...Array.from({ length: 10 }, () => r1(rf(11.3, 17.5)))];
+  const kLate = [r1(rf(9.5, 10.4)), r1(rf(10.5, 11.1)), 11.2, 11.2, ...Array.from({ length: 10 }, () => r1(rf(11.3, 15.5)))];
   applyLags(karanH, Array.from({ length: 8 }, () => r1(rf(0.3, 2.9))), kLate);
   const restH = hsOf((c) => c.owner === MEHRA && c.karan !== true);
   const r = groupCounts(restH); // 16 closed, 13 late
   assert(r.c === 16 && r.l === 13, 'mehra rest counts');
-  const rLate = [r1(rf(4, 9)), 9.4, 9.4, ...Array.from({ length: 10 }, () => r1(rf(9.6, 18)))];
+  const rLate = [r1(rf(4, 9)), 9.4, 9.4, ...Array.from({ length: 10 }, () => r1(rf(9.6, 15)))];
   applyLags(restH, Array.from({ length: 16 }, () => r1(rf(0.3, 2.9))), rLate);
 }
 // History lags: in-house 88%, other firms 76%, Mehra 29% closed within 2 days.
@@ -659,8 +664,9 @@ for (const [owner, t] of [[null, 1.1], [SUBRA, 1.8], [DESAI, 2.1], [BANER, 2.6],
   const carry: Record<string, number> = { mehra: 0, other: 0, inhouse: 0 };
   for (const [key, hs] of byWeek) {
     const g = key.replace(/^\d+/, '');
-    const exact = hs.length * rate[g] + carry[g];
-    const closedN = Math.round(exact); carry[g] = exact - closedN;
+    const wobble = (h01('wk2' + key) - 0.5) * (g === 'inhouse' ? 0.08 : 0.16);
+    const exact = hs.length * (rate[g] + wobble) + carry[g];
+    const closedN = Math.max(0, Math.min(hs.length, Math.round(exact))); carry[g] = exact - closedN - hs.length * wobble;
     shuffle(hs).forEach((h, i) => {
       h.lag_days = i < closedN ? r1(rf(0.2, 2.9)) : g === 'mehra' ? r1(rf(4, 24)) : r1(rf(3.1, 9));
     });
@@ -696,7 +702,7 @@ for (const h of [...hearings].sort((a, b) => a.date.localeCompare(b.date))) {
     const inWin = d >= W30;
     const lawyerOk = canAct(h.owner_id, d) && (!inWin || firmTargets[h.firm_id!].has(m.id));
     const p = h.firm_id === MEHRA ? 0.25 : 0.6;
-    if (lawyerOk && h01(h.id + 'up') < p) up = h.owner_id;
+    if (lawyerOk && h01(h.id + 'up') < p * (P(h.owner_id).wau ? 1 : 0.35)) up = h.owner_id;
   }
   up ??= legalActor(m, d);
   h.updater_id = up;
@@ -831,12 +837,12 @@ const alerts: Alert[] = [];
   for (let d = DATA_START; d < W30; d++) {
     if (!isWorkday(d)) continue;
     for (const bu of [SD, PR, HR, FI]) {
-      const nA = bu === SD ? 6 : bu === PR ? 5 : 3;
+      const nA = bu === SD ? 4 : bu === PR ? 3 : 2;
       const rate = bu === HR ? 0.5 : bu === SD ? 0.42 : bu === FI ? 0.38 : 0.2;
       for (let i = 0; i < nA; i++) {
         const u = pick(bizByBu[bu]);
         const m = pick(active.filter((x) => x.bu === bu && !isDormant(x) && D(x.tracked_on) <= d));
-        const view = canAct(u.id, d) && h01(`${d}${bu}${i}`) < rate;
+        const view = canAct(u.id, d) && h01(`${d}${bu}${i}`) < rate * (P(u.id).wau ? 1 : 0.2);
         alerts.push({ id: `A${++aSeq}`, user_id: u.id, matter_id: m.id, sent_on: fromDay(d), opened_on: view ? fromDay(d) : null, case_viewed_on: view ? fromDay(d) : null });
         if (view) act(u.id, d, 'alert_case_viewed', 'my_cases', { m: m.id }, 'ah' + aSeq);
       }
@@ -1239,6 +1245,7 @@ keepalive();
     let p = base[u.role] * (0.5 + h01(u.id + f));
     if (u.id === RITIKA) p *= 1.4;
     if (u.team_id === MEHRA) p *= 0.4;
+    if (!P(u.id).wau) p *= 0.03; // lapsed users show up rarely, not daily
     return p;
   };
   const domainUD = (f: Feature) => {
