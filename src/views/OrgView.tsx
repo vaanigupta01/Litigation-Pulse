@@ -161,7 +161,7 @@ export function OrgView() {
           </Section>
 
           <Section id="health">
-            <ChartCard id="M25">
+            <ChartCard id="M25" headline={<Head items={[[`${pl.filter((x) => x.p95 > q.PAGE_BUDGET).length} of ${pl.length}`, 'pages over the 3-second budget']]} />} note="Slowest 5% of page loads over the last 7 days.">
               <PageLoadBars />
             </ChartCard>
             <ChartCard id="M26" headline={<Head items={[[rl.avg.toFixed(1), 'per 100 sessions'], [rl.monday.toFixed(1), 'Monday 09:00 to 11:00']]} />} note="Dots mark Mondays. Dashed line: alert at 5.">

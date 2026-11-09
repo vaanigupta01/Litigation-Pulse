@@ -1,10 +1,11 @@
 import { Command } from 'cmdk';
 import { motion } from 'motion/react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { go, useApp, type Lens } from '../app/state';
 import { account, teamById, userById } from '../lib/data';
 import { AS_OF_LABEL, type Period } from '../lib/dates';
-import { searchIndex } from '../lib/selectors';
+import { searchIndex, type Level } from '../lib/selectors';
+import type { Role } from '../lib/types';
 
 function crumbs(route: ReturnType<typeof useApp>['route']) {
   const c: { id: string; label: string; href: string }[] = [{ id: 'org', label: account.short, href: '#/org' }];
@@ -103,17 +104,35 @@ export function JumpTo() {
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
   }, [setSearchOpen]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [level, setLevel] = useState<'all' | Level>('all');
+  const [role, setRole] = useState<'all' | Role>('all');
+  useEffect(() => { if (!searchOpen) { setLevel('all'); setRole('all'); } }, [searchOpen]);
+  const count = (l: Level) => items.filter((i) => i.level === l).length;
+  const shown = items.filter((i) => (level === 'all' || i.level === level) && (level !== 'user' || role === 'all' || i.role === role));
+  const tabs: ['all' | Level, string, number][] = [['all', 'All', items.length], ['org', 'Organisation', count('org')], ['team', 'Teams', count('team')], ['user', 'Users', count('user')]];
+  const groups: [Level, string][] = [['org', 'Organisation'], ['team', 'Teams'], ['user', 'Users']];
+  const pill = (on: boolean) => `rounded-full border px-2.5 py-1 text-[12px] transition ${on ? 'border-ink bg-ink font-medium text-canvas' : 'border-hairline text-muted hover:text-ink'}`;
   return (
-    <Command.Dialog open={searchOpen} onOpenChange={setSearchOpen} label="Jump to a team or person" className="fixed inset-0 z-50 grid place-items-start justify-center bg-ink/20 px-4 pt-[12vh] backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setSearchOpen(false); }}>
-      <div className="glass w-[min(560px,92vw)] overflow-hidden !rounded-2xl !bg-surface">
-        <Command.Input autoFocus placeholder="Jump to a team or a person…" className="w-full border-b border-hairline bg-transparent px-4 py-3 text-[14px] text-ink outline-none placeholder:text-muted" />
-        <Command.List className="max-h-[50vh] overflow-auto p-2">
+    <Command.Dialog open={searchOpen} onOpenChange={setSearchOpen} label="Jump to the organisation, a team or a user" className="fixed inset-0 z-50 grid place-items-start justify-center bg-ink/20 px-4 pt-[12vh] backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setSearchOpen(false); }}>
+      <div className="glass w-[min(600px,92vw)] overflow-hidden !rounded-2xl !bg-surface">
+        <Command.Input ref={inputRef} autoFocus placeholder="Jump to the organisation, a team or a user…" className="w-full border-b border-hairline bg-transparent px-4 py-3 text-[14px] text-ink outline-none placeholder:text-muted" />
+        <div className="flex flex-wrap items-center gap-1.5 border-b border-hairline px-3 py-2" role="tablist" aria-label="Level">
+          {tabs.map(([k, l, n]) => <button key={k} role="tab" aria-selected={level === k} onClick={() => { setLevel(k); inputRef.current?.focus(); }} className={pill(level === k)}>{l} <span className="num opacity-60">{n}</span></button>)}
+        </div>
+        {level === 'user' && (
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-hairline px-3 py-2" aria-label="Role">
+            {(['all', 'Admin', 'Legal', 'Business', 'Lawyer'] as const).map((r) => <button key={r} onClick={() => { setRole(r); inputRef.current?.focus(); }} className={pill(role === r)}>{r === 'all' ? 'All roles' : r}</button>)}
+          </div>
+        )}
+        <Command.List className="max-h-[46vh] overflow-auto p-2">
           <Command.Empty className="px-3 py-6 text-center text-[13px] text-muted">No match.</Command.Empty>
-          {(['Teams', 'People'] as const).map((g) => (
-            <Command.Group key={g} heading={g} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted">
-              {items.filter((i) => (g === 'Teams' ? i.href.startsWith('#/team') : i.href.startsWith('#/user'))).map((i) => (
-                <Command.Item key={i.id} value={`${i.label} ${i.sub}`} onSelect={() => { setSearchOpen(false); go(i.href); }} className="flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 text-[13px] data-[selected=true]:bg-canvas">
-                  <span className="text-ink">{i.label}</span><span className="text-[11px] text-muted">{i.sub}</span>
+          {groups.filter(([g]) => shown.some((i) => i.level === g)).map(([g, heading]) => (
+            <Command.Group key={g} heading={heading} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted">
+              {shown.filter((i) => i.level === g).map((i) => (
+                <Command.Item key={i.id} value={`${i.label} ${i.sub}`} onSelect={() => { setSearchOpen(false); go(i.href); }} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] data-[selected=true]:bg-canvas">
+                  <LevelTag level={i.level} />
+                  <span className="text-ink">{i.label}</span><span className="ml-auto text-[11px] text-muted">{i.sub}</span>
                 </Command.Item>
               ))}
             </Command.Group>
@@ -121,5 +140,30 @@ export function JumpTo() {
         </Command.List>
       </div>
     </Command.Dialog>
+  );
+}
+
+const LEVEL: Record<Level, [string, string]> = { org: ['Org', 'hearing'], team: ['Team', 'intake'], user: ['User', 'enrich'] };
+function LevelTag({ level }: { level: Level }) {
+  const [label, c] = LEVEL[level];
+  return <span className="w-11 shrink-0 rounded-md py-0.5 text-center text-[10px] font-medium" style={{ color: `var(--${c})`, background: `color-mix(in srgb, var(--${c}) 12%, transparent)` }}>{label}</span>;
+}
+
+/** Where a page sits in the organisation → team → user path. Shown at the top of team and user pages. */
+export function LevelPath({ level, teamHref }: { level: 'team' | 'user'; teamHref?: string }) {
+  const steps: [Level, string, string | undefined][] = [['org', 'Organisation', '#/org'], ['team', 'Team', level === 'user' ? teamHref : undefined], ['user', 'User', undefined]];
+  return (
+    <div className="mb-3 inline-flex items-center gap-1 rounded-full border border-hairline bg-surface p-1 text-[12px]" aria-label={`${level === 'team' ? 'Team' : 'User'} view`}>
+      {steps.map(([k, l, href], i) => {
+        const on = k === level;
+        const cls = `rounded-full px-2.5 py-0.5 ${on ? 'bg-ink font-medium text-canvas' : href ? 'text-muted hover:text-ink' : 'text-muted/50'}`;
+        return (
+          <span key={k} className="flex items-center gap-1">
+            {i > 0 && <span className="text-muted/50" aria-hidden>›</span>}
+            {href && !on ? <a href={href} className={cls}>{l}</a> : <span className={cls} aria-current={on ? 'page' : undefined}>{on ? `${l} view` : l}</span>}
+          </span>
+        );
+      })}
+    </div>
   );
 }

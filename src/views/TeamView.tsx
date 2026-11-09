@@ -5,6 +5,7 @@ import {
 } from '../charts/charts';
 import { AlertBreakdown, AwaitingBreakdown, DormantBreakdown } from '../charts/breakdowns';
 import { ChartCard } from '../components/ChartCard';
+import { LevelPath } from '../components/TopBar';
 import { MembersTable } from '../components/MembersTable';
 import { PulseRow } from '../components/Pulse';
 import { pc, SectionTitle } from '../components/ui';
@@ -29,6 +30,7 @@ export function TeamView({ id }: { id: string }) {
   return (
     <div>
       <header className="pb-6 pt-4">
+        <div><LevelPath level="team" /></div>
         <div className="text-[12px] font-medium uppercase tracking-wide text-muted">{typeLabel} · {members.length} people</div>
         <h1 className="serif mt-1 text-[44px] leading-[1.05] text-ink">{t.name}</h1>
         <p className="mt-2 max-w-2xl text-[14px] text-muted">

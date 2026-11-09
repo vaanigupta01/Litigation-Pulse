@@ -669,9 +669,13 @@ export const ROLE_BLURB: Record<Role, string> = {
   Business: 'Business users follow cases in their unit. They mostly see Legistify through email alerts and case summaries.',
   Lawyer: 'Lawyers are external counsel. They see the cases assigned to them, report hearing outcomes, upload orders and bill fees.',
 };
-export const searchIndex = () => [
-  ...teams.filter((t) => t.type !== 'leadership').map((t) => ({ id: t.id, label: t.name, sub: t.type === 'business_unit' ? 'Business unit' : `Counsel firm, ${t.city}`, href: `#/team/${t.id}` })),
-  ...users.map((u) => ({ id: u.id, label: u.name, sub: `${u.role} · ${teamById.get(u.team_id)!.name}`, href: `#/user/${u.id}` })),
+export type Level = 'org' | 'team' | 'user';
+export interface SearchItem { id: string; level: Level; label: string; sub: string; href: string; role?: Role }
+/** Everything the Jump-to search can open, tagged with its level in the org → team → user path. */
+export const searchIndex = (): SearchItem[] => [
+  { id: 'org', level: 'org', label: account.short, sub: `${users.length} seats · ${teams.length} teams`, href: '#/org' },
+  ...teams.map((t) => ({ id: t.id, level: 'team' as const, label: t.name, sub: `${t.type === 'business_unit' ? 'Business unit' : t.type === 'counsel_firm' ? `Counsel firm, ${t.city}` : 'Admins'} · ${users.filter((u) => u.team_id === t.id).length} people`, href: `#/team/${t.id}` })),
+  ...users.map((u) => ({ id: u.id, level: 'user' as const, label: u.name, sub: `${u.role} · ${teamById.get(u.team_id)!.name}`, href: `#/user/${u.id}`, role: u.role })),
 ];
 export const teamOf = (uid: string): Team => teamById.get(userById.get(uid)!.team_id)!;
 export { DATA_END, DATA_START, TODAY };

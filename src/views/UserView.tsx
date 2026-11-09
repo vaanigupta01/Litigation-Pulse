@@ -1,6 +1,7 @@
 import { useApp, useTokens } from '../app/state';
 import { CloseOutTrend, Dumbbell } from '../charts/charts';
 import { ChartCard } from '../components/ChartCard';
+import { LevelPath } from '../components/TopBar';
 import { pc, StatusPill } from '../components/ui';
 import { dayOf, teamById, userById } from '../lib/data';
 import { fmtDay, fmtDayYear, TODAY } from '../lib/dates';
@@ -92,6 +93,7 @@ export function UserView({ id }: { id: string }) {
   return (
     <div>
       <header className="pb-6 pt-4">
+        <LevelPath level="user" teamHref={`#/team/${team.id}`} />
         <div className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-[22px] font-semibold text-surface" style={{ background: `var(--${u.role === 'Lawyer' ? 'hearing' : u.role === 'Legal' ? 'enrich' : u.role === 'Admin' ? 'ai' : 'value'})` }}>
             {u.name.replace('Adv. ', '').split(' ').map((p) => p[0]).join('').slice(0, 2)}
