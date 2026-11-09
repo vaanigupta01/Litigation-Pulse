@@ -471,7 +471,7 @@ export function rateLimits(period: Period = 30) {
   const rows = tech.errors.filter((r) => dayOf(r.date) >= from);
   const S = rows.reduce((a, r) => a + r.sessions, 0), E = rows.reduce((a, r) => a + r.errors_429, 0);
   const Sm = rows.reduce((a, r) => a + r.mm_sessions, 0), Em = rows.reduce((a, r) => a + r.mm_errors, 0);
-  const daily = tech.errors.filter((r) => dayOf(r.date) >= periodStart(90)).map((r) => ({ date: r.date, label: fmtDay(dayOf(r.date)), rate: (r.errors_429 / r.sessions) * 100, monday: dow(dayOf(r.date)) === 0 }));
+  const daily = tech.errors.filter((r) => dayOf(r.date) >= from).map((r) => ({ date: r.date, label: fmtDay(dayOf(r.date)), rate: (r.errors_429 / r.sessions) * 100, monday: dow(dayOf(r.date)) === 0 }));
   const avg = (E / S) * 100;
   return { avg, monday: (Em / Sm) * 100, daily, status: (avg > 5 ? 'act' : avg > 4 ? 'watch' : 'good') as Status };
 }
@@ -493,11 +493,11 @@ export function pulse(s: Scope, period: Period) {
   const sync = syncFreshness(), syncPrev = syncFreshness(true);
   const am = activeMatters(s), amPrev = activeMatters(s, DATA_END - period);
   return {
-    M01: { value: co.rate, prev: coPrev.rate, closeOut: co, series: closeOutWeekly(s).map((x) => x.all), status: closeOutStatus(co.rate) },
-    M02: { value: w.rate, prev: wPrev.rate, wau: w, series: wauWeekly(s).map((x) => x.rate), status: wauStatus(w.byRole) },
+    M01: { value: co.rate, prev: coPrev.rate, closeOut: co, series: closeOutTrend(s, period).map((x) => x.all), status: closeOutStatus(co.rate) },
+    M02: { value: w.rate, prev: wPrev.rate, wau: w, series: wauTrend(s, period).map((x) => x.rate), status: wauStatus(w.byRole) },
     M03: { value: run.last.limitDay!, prev: run.prev.limitDay!, run, series: run.byMonth.map((m) => m.limitDay ?? daysInMonth(2026, m.m) + 3), status: run.status },
-    M04: { value: sync.worst.rate, prev: syncPrev.worst.rate, sync, series: syncWeekly().map((x) => x.rate), status: sync.status },
-    M05: { value: am.count, prev: amPrev.count, am, series: activeMattersWeekly(s).map((x) => x.count), status: 'info' as Status },
+    M04: { value: sync.worst.rate, prev: syncPrev.worst.rate, sync, series: syncTrend(period).map((x) => x.rate), status: sync.status },
+    M05: { value: am.count, prev: amPrev.count, am, series: activeMattersTrend(s, period).map((x) => x.count), status: 'info' as Status },
   };
 }
 
@@ -675,3 +675,77 @@ export const searchIndex = () => [
 ];
 export const teamOf = (uid: string): Team => teamById.get(userById.get(uid)!.team_id)!;
 export { DATA_END, DATA_START, TODAY };
+
+// ------------------------------------------------------------------ period-aware trends
+// 30 days: one point per day, each the 7 days ending that day (smooth, enough points).
+// 90 and 180 days: one point per Monday-to-Sunday week inside the period.
+export interface Bucket { label: string; from: number; to: number }
+export function buckets(period: Period): Bucket[] {
+  if (period === 30) {
+    const out: Bucket[] = [];
+    for (let d = periodStart(30); d <= DATA_END; d++) out.push({ label: fmtDay(d), from: d - 6, to: d });
+    return out;
+  }
+  const n = period === 90 ? 13 : WEEKS;
+  return Array.from({ length: n }, (_, i) => { const w = WEEKS - n + i; return { label: weekLabels[w], from: weekStart(w), to: weekEnd(w) }; });
+}
+export const bucketNote = (p: Period) => (p === 30 ? 'Each point covers the 7 days ending that day.' : 'Each point is one week, Monday to Sunday.');
+export const bucketOf = (p: Period, day: number) => buckets(p).find((b) => p !== 30 && b.from <= day && day <= b.to)?.label ?? buckets(p).find((b) => p === 30 && b.to === day)?.label ?? null;
+
+export function closeOutTrend(s: Scope, period: Period) {
+  const hs = hearingsIn(s);
+  return buckets(period).map((b) => {
+    const x = hs.filter((h) => eligible(h, b.from, b.to));
+    const r = (pred: (h: Hearing) => boolean) => { const y = x.filter(pred); return y.length ? pct(y.filter(isClosedOut).length, y.length) : null; };
+    return { week: b.label, all: r(() => true), inhouse: r((h) => h.owner_type === 'inhouse'), counsel: r((h) => h.owner_type === 'counsel'), n: x.length };
+  });
+}
+export function wauTrend(s: Scope, period: Period) {
+  const us = usersIn(s);
+  return buckets(period).map((b) => { const a = us.filter((u) => activeBetween(u.id, b.from, b.to)).length; return { week: b.label, active: a, rate: pct(a, us.length) }; });
+}
+export function activeMattersTrend(s: Scope, period: Period) {
+  return buckets(period).map((b) => ({ week: b.label, count: mattersIn(s, activeMattersAt(b.to)).length }));
+}
+export function syncTrend(period: Period) {
+  return buckets(period).map((b) => {
+    const x = tech.sync.filter((r) => { const d = dayOf(r.date); return d >= b.from && d <= b.to; });
+    const worst = COURT_TYPES.map((ct) => { const y = x.filter((r) => r.court_type === ct); return pct(y.reduce((a, r) => a + r.cases_synced_24h, 0), y.reduce((a, r) => a + r.cases_active, 0)); });
+    return { week: b.label, rate: Math.min(...worst) };
+  });
+}
+export function dormantTrend(s: Scope, period: Period) {
+  const ms = mattersIn(s);
+  return buckets(period).map((b) => {
+    const a = ms.filter((m) => activeOn(m, b.to));
+    const d = a.filter((m) => isDormantAt(m, b.to)).length;
+    return { week: b.label, count: d, share: pct(d, a.length) };
+  });
+}
+export function defaultPriorityTrend(period: Period) {
+  return buckets(period).map((b) => { const a = activeMattersAt(b.to); return { week: b.label, rate: pct(a.filter((m) => m.priority_default).length, a.length) }; });
+}
+export function rejectionTrend(period: Period) {
+  const resp = aiEvents.filter((e) => !e.b && e.f !== 'mis_report');
+  return buckets(period).map((b) => {
+    const x = resp.filter((e) => { const d = dayOf(e.t); return d >= b.from && d <= b.to; });
+    return { week: b.label, regenerate: pct(x.filter((e) => e.fb === 1).length, x.length), thumbs: pct(x.filter((e) => e.fb === 2).length, x.length) };
+  });
+}
+export function followThroughTrend(period: Period) {
+  const sessions = activity.filter((a) => a.k === 'insight_viewed');
+  return buckets(period).map((b) => { const x = sessions.filter((a) => { const d = dayOf(a.t); return d >= b.from && d <= b.to; }); return { week: b.label, rate: x.length ? pct(x.filter((a) => a.fo).length, x.length) : null }; });
+}
+export function reachTrend(period: Period) {
+  const views = activity.filter((a) => a.k === 'insight_viewed');
+  const mis = activity.filter((a) => a.k === 'mis_downloaded');
+  return buckets(period).map((b) => {
+    const inB = (t: string) => { const d = dayOf(t); return d >= b.from && d <= b.to; };
+    const v = new Set(views.filter((a) => inB(a.t)).map((a) => a.u));
+    const byRole = (r: Role) => [...v].filter((u) => userById.get(u)!.role === r).length;
+    return { week: b.label, Admin: byRole('Admin'), Legal: byRole('Legal'), Business: byRole('Business'), total: v.size, mis: mis.filter((a) => inB(a.t)).length };
+  });
+}
+export function accuracyTrend(period: Period) {
+  return summaryAccuracy().rows.filter((r, i) => dayOf(evals[i].week_start) + 6 >= periodStart(period));
+}

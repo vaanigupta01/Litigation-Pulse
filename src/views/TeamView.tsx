@@ -52,10 +52,10 @@ export function TeamView({ id }: { id: string }) {
             )}
             {isFirm && ext && (
               <>
-                <ChartCard id="M13" caption="Which business units' hearings does this firm carry?" drillable headline={<Head items={[[String(ext.byBu.reduce((a, b) => a + b.hearings, 0)), `hearings in ${period} days`]]} />} note="Hearings by owning business unit. Click a bar to open the unit.">
+                <ChartCard id="M13" anchor="card-M13-bu" caption="Which business units' hearings does this firm carry?" drillable headline={<Head items={[[String(ext.byBu.reduce((a, b) => a + b.hearings, 0)), `hearings in ${period} days`]]} />} note="Hearings by owning business unit. Click a bar to open the unit.">
                   <FirmByBu firmId={id} period={period} />
                 </ChartCard>
-                <ChartCard id="M13" caption="How long after each hearing is the outcome recorded?" headline={<Head items={[[String(ext.recorded), 'outcomes recorded'], [String(ext.awaitingNow), 'still awaiting']]} />} note="Grey bars count as closed out (recorded by the second day after the hearing).">
+                <ChartCard id="M13" anchor="card-M13-lag" caption="How long after each hearing is the outcome recorded?" headline={<Head items={[[String(ext.recorded), 'outcomes recorded'], [String(ext.awaitingNow), 'still awaiting']]} />} note="Grey bars count as closed out (recorded by the second day after the hearing).">
                   <LagDistribution firmId={id} period={period} />
                 </ChartCard>
               </>

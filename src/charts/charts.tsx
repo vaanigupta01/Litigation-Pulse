@@ -4,20 +4,23 @@ import {
 } from 'recharts';
 import { go, useApp, useNarrow, useTokens } from '../app/state';
 import { Bar, nf, pc, Sparkline } from '../components/ui';
-import type { Period } from '../lib/dates';
+import { toDay, type Period } from '../lib/dates';
 import { q } from '../lib/q';
 import { ORG, teamScope, type Scope } from '../lib/selectors';
 import { anim, axisProps, EndLabel, gridProps, Tip, type LP } from './common';
 
 const pctTick = (v: number) => `${Math.round(v * 100)}%`;
+/** Tooltip title for a trend point: 7-day window (30d view) or a week. */
+const ptTitle = (period: Period, label: unknown) => (period === 30 ? `7 days to ${label}` : `Week of ${label}`);
 const hl = (t: ReturnType<typeof useTokens>, focus: string, on: boolean) => (on ? focus : t.quiet);
 
 // ------------------------------------------------------------------ M01
 export function CloseOutTrend({ scope, height = 240 }: { scope: Scope; height?: number }) {
   const t = useTokens();
-  const data = q.closeOutWeekly(scope).filter((d) => d.n > 0);
+  const { period } = useApp();
+  const data = q.closeOutTrend(scope, period).filter((d) => d.n > 0);
   const n = data.length;
-  const aug = data.find((d) => d.week === '27 Jul' || d.week === '3 Aug')?.week;
+  const aug = period === 30 ? undefined : data.find((d) => d.week === '27 Jul')?.week;
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 10, right: 72, bottom: 0, left: -18 }}>
@@ -27,7 +30,7 @@ export function CloseOutTrend({ scope, height = 240 }: { scope: Scope; height?: 
         {scope.kind === 'org' && aug && <ReferenceLine x={aug} stroke={t.hairline} label={{ value: 'Mehra takes over S&D, 1 Aug', position: 'insideBottomLeft', fill: t.muted, fontSize: 10 }} />}
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis domain={[0, 1]} tickFormatter={pctTick} {...axisProps(t)} ticks={[0, 0.25, 0.5, 0.75, 1]} />
-        <Tooltip cursor={{ stroke: t.hairline }} content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['All hearings', pc(p.all as number), t.hearing], ['In-house', pc(p.inhouse as number), t.muted], ['Counsel', pc(p.counsel as number), t.muted], ['Hearings', String(p.n)]] })} />} />
+        <Tooltip cursor={{ stroke: t.hairline }} content={<Tip render={(p) => ({ title: ptTitle(period, p.week), rows: [['All hearings', pc(p.all as number), t.hearing], ['In-house', pc(p.inhouse as number), t.muted], ['Counsel', pc(p.counsel as number), t.muted], ['Hearings', String(p.n)]] })} />} />
         <Line dataKey="inhouse" stroke={t.muted} strokeOpacity={0.55} strokeWidth={1.5} dot={false} connectNulls {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="In-house" color={t.muted} dy={-4} />} />
         <Line dataKey="counsel" stroke={t.muted} strokeOpacity={0.55} strokeWidth={1.5} strokeDasharray="4 3" dot={false} connectNulls {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="Counsel" color={t.muted} dy={6} />} />
         <Line dataKey="all" stroke={t.hearing} strokeWidth={2.25} dot={false} activeDot={{ r: 4 }} connectNulls {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="All" color={t.hearing} />} />
@@ -317,18 +320,20 @@ export function AwaitingBars({ scope, height }: { scope: Scope; height?: number 
 // ------------------------------------------------------------------ M15 dormant
 export function DormantArea({ scope, height = 200 }: { scope: Scope; height?: number }) {
   const t = useTokens();
+  const { period } = useApp();
   const d = q.dormant(scope);
-  const n = d.series.length;
+  const series = q.dormantTrend(scope, period);
+  const n = series.length;
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart data={d.series} margin={{ top: 16, right: 72, bottom: 0, left: -18 }}>
+      <AreaChart data={series} margin={{ top: 16, right: 72, bottom: 0, left: -18 }}>
         <defs>
           <linearGradient id="dormFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={t.hearing} stopOpacity={0.22} /><stop offset="1" stopColor={t.hearing} stopOpacity={0.02} /></linearGradient>
         </defs>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis {...axisProps(t)} allowDecimals={false} />
-        <Tooltip content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['Dormant cases', String(p.count), t.hearing], ['Share of active', pc(p.share as number)]] })} />} />
+        <Tooltip content={<Tip render={(p) => ({ title: period === 30 ? String(p.week) : `Week of ${p.week}`, rows: [['Dormant cases', String(p.count), t.hearing], ['Share of active', pc(p.share as number)]] })} />} />
         <Area dataKey="count" stroke={t.hearing} strokeWidth={1.75} fill="url(#dormFill)" {...anim} label={(p: LP) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`${d.count} · ${pc(d.share)}`} color={t.hearing} />} />
       </AreaChart>
     </ResponsiveContainer>
@@ -389,17 +394,18 @@ export function AskDaily({ height = 220 }: { height?: number }) {
 export function RejectionLines({ period, height = 220 }: { period: Period; height?: number }) {
   const t = useTokens();
   const r = q.rejection(period);
-  const data = r.weekly.filter((w) => w.regenerate > 0);
+  const data = q.rejectionTrend(period).filter((w) => w.regenerate > 0);
   const n = data.length;
+  const model = q.bucketOf(period, toDay('2026-09-14'));
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={{ top: 18, right: 112, bottom: 0, left: -18 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis domain={[0, 0.2]} tickFormatter={pctTick} {...axisProps(t)} ticks={[0, 0.05, 0.1, 0.15, 0.2]} />
-        <ReferenceLine x="14 Sep" stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Model update 14 Sep', position: 'insideTopLeft', fill: t.ink, fontSize: 11 }} />
+        {model && <ReferenceLine x={model} stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Model update 14 Sep', position: 'insideTopLeft', fill: t.ink, fontSize: 11 }} />}
         <ReferenceLine y={0.1} stroke={t.muted} strokeDasharray="2 4" label={{ value: 'Alert 10%', position: 'insideBottomLeft', fill: t.muted, fontSize: 10 }} />
-        <Tooltip content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['Regenerated', pc(p.regenerate as number, 1), t.muted], ['Thumbs-down', pc(p.thumbs as number, 1), t.ai]] })} />} />
+        <Tooltip content={<Tip render={(p) => ({ title: ptTitle(period, p.week), rows: [['Regenerated', pc(p.regenerate as number, 1), t.muted], ['Thumbs-down', pc(p.thumbs as number, 1), t.ai]] })} />} />
         <Line dataKey="regenerate" stroke={t.muted} strokeOpacity={0.6} strokeWidth={1.5} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Regenerate ${pc(r.regenerate)}`} color={t.muted} />} />
         <Line dataKey="thumbs" stroke={t.ai} strokeWidth={2} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Thumbs-down ${pc(r.thumbs)}`} color={t.ai} />} />
       </LineChart>
@@ -410,7 +416,8 @@ export function RejectionLines({ period, height = 220 }: { period: Period; heigh
 // ------------------------------------------------------------------ M19 accuracy
 export function AccuracyLine({ height = 200 }: { height?: number }) {
   const t = useTokens();
-  const a = q.summaryAccuracy();
+  const { period } = useApp();
+  const a = { rows: q.accuracyTrend(period) };
   const n = a.rows.length;
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -420,7 +427,7 @@ export function AccuracyLine({ height = 200 }: { height?: number }) {
         <YAxis domain={[0.85, 0.95]} tickFormatter={pctTick} {...axisProps(t)} ticks={[0.86, 0.88, 0.9, 0.92, 0.94]} />
         <ReferenceLine y={0.9} stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Target 90%', position: 'insideTopLeft', fill: t.muted, fontSize: 11 }} />
         <ReferenceLine y={0.88} stroke={t.muted} strokeDasharray="2 4" label={{ value: 'Alert 88%', position: 'insideBottomLeft', fill: t.muted, fontSize: 10 }} />
-        <ReferenceLine x="14 Sep" stroke={t.hairline} />
+        {a.rows.some((r) => r.week === '14 Sep') && <ReferenceLine x="14 Sep" stroke={t.hairline} label={{ value: 'Model update', position: 'insideBottomRight', fill: t.muted, fontSize: 10 }} />}
         <Tooltip content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['Accuracy', pc(p.accuracy as number, 1), t.ai], ['Summaries graded', String(p.sample)]] })} />} />
         <Line dataKey="accuracy" stroke={t.ai} strokeWidth={2} dot={{ r: 2.5, fill: t.ai, strokeWidth: 0 }} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={pc(a.rows[n - 1].accuracy, 1)} color={t.ai} />} />
       </LineChart>
@@ -431,8 +438,8 @@ export function AccuracyLine({ height = 200 }: { height?: number }) {
 // ------------------------------------------------------------------ M21 insights reach
 export function ReachBars({ height = 230 }: { height?: number }) {
   const t = useTokens();
-  const r = q.insightsReach();
-  const data = r.weekly;
+  const { period } = useApp();
+  const data = q.reachTrend(period);
   return (
     <div>
       <div className="mb-2 flex flex-wrap gap-3 text-[11px] text-muted">
@@ -443,8 +450,8 @@ export function ReachBars({ height = 230 }: { height?: number }) {
         <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -22 }} barCategoryGap="22%">
           <CartesianGrid {...gridProps(t)} />
           <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
-          <YAxis {...axisProps(t)} allowDecimals={false} label={{ value: 'per week', angle: -90, position: 'insideLeft', offset: 28, fill: t.muted, fontSize: 10 }} />
-          <Tooltip cursor={{ fill: t.hairline, fillOpacity: 0.4 }} content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['Admin', String(p.Admin)], ['Legal', String(p.Legal)], ['Business', String(p.Business)], ['Distinct viewers', String(p.total)], ['MIS downloads', String(p.mis)]] })} />} />
+          <YAxis {...axisProps(t)} allowDecimals={false} label={{ value: period === 30 ? 'per 7 days' : 'per week', angle: -90, position: 'insideLeft', offset: 28, fill: t.muted, fontSize: 10 }} />
+          <Tooltip cursor={{ fill: t.hairline, fillOpacity: 0.4 }} content={<Tip render={(p) => ({ title: ptTitle(period, p.week), rows: [['Admin', String(p.Admin)], ['Legal', String(p.Legal)], ['Business', String(p.Business)], ['Distinct viewers', String(p.total)], ['MIS downloads', String(p.mis)]] })} />} />
           <RBar dataKey="Admin" stackId="v" fill={t.value} {...anim} />
           <RBar dataKey="Legal" stackId="v" fill={t.value} fillOpacity={0.6} {...anim} />
           <RBar dataKey="Business" stackId="v" fill={t.value} fillOpacity={0.32} radius={[4, 4, 0, 0]} {...anim} />
@@ -476,7 +483,8 @@ export function PageLoadBars() {
 // ------------------------------------------------------------------ M26 rate limits
 export function RateLimitLine({ height = 210 }: { height?: number }) {
   const t = useTokens();
-  const r = q.rateLimits(30);
+  const { period } = useApp();
+  const r = q.rateLimits(period);
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={r.daily} margin={{ top: 16, right: 12, bottom: 0, left: -18 }}>
@@ -494,7 +502,8 @@ export function RateLimitLine({ height = 210 }: { height?: number }) {
 
 // ------------------------------------------------------------------ M27 zero results
 export function ZeroResults() {
-  const rows = q.zeroResults(30);
+  const { period } = useApp();
+  const rows = q.zeroResults(period);
   return (
     <div className="grid gap-5 sm:grid-cols-2">
       {rows.map((r) => (
@@ -502,7 +511,8 @@ export function ZeroResults() {
           <div className="flex items-baseline justify-between"><span className="text-[13px] text-muted">{r.label}</span><span className="num text-[22px] font-semibold">{pc(r.rate)}</span></div>
           <Bar value={r.rate} max={0.3} color="var(--health)" height={10} />
           <div className="mt-1 text-[11px] text-muted">{nf(r.zero)} of {nf(r.searches)} searches found nothing</div>
-          <ol className="mt-3 space-y-1 text-[12px]">
+          <div className="mt-3 text-[11px] text-muted">Top misses, last 30 days</div>
+          <ol className="mt-1 space-y-1 text-[12px]">
             {r.top.map((q2) => <li key={q2.query} className="flex justify-between gap-2 border-b border-hairline pb-1"><span className="font-mono text-[11px]">"{q2.query}"</span><span className="num text-muted">{q2.count}</span></li>)}
           </ol>
         </div>

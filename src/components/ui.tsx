@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { TREND_FOLLOWS_PERIOD, WINDOW } from '../lib/metrics';
 import type { Status } from '../lib/selectors';
 
 export const pc = (x: number | null | undefined, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? '—' : `${(x * 100).toFixed(d)}%`);
@@ -101,5 +102,26 @@ export function Bar({ value, max, color, height = 10, ghost }: { value: number; 
       {ghost !== undefined && <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${(ghost / max) * 100}%`, background: 'color-mix(in srgb, var(--muted) 18%, transparent)' }} />}
       <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(0, Math.min(1, value / max)) * 100}%`, background: color }} />
     </div>
+  );
+}
+
+/** Says which time window a card's number covers, and whether the period toggle moves it. */
+export function WindowChip({ id, period, compact }: { id: string; period: number; compact?: boolean }) {
+  const w = WINDOW[id];
+  if (!w) return null;
+  if (w === 'period') {
+    return (
+      <span title="Follows the 30 / 90 / 180-day toggle" className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-medium text-canvas whitespace-nowrap">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+        Last {period} days
+      </span>
+    );
+  }
+  const trend = TREND_FOLLOWS_PERIOD.has(id);
+  return (
+    <span title={`Defined on a fixed window, so the period toggle does not change this number${trend ? '. The trend line still spans the selected period.' : '.'}`} className="inline-flex items-center gap-1 rounded-md border border-dashed border-hairline px-1.5 py-0.5 text-[11px] text-muted whitespace-nowrap">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+      Fixed: {w.charAt(0).toLowerCase() + w.slice(1)}{trend && !compact ? ' · trend follows period' : ''}
+    </span>
   );
 }

@@ -59,3 +59,18 @@ export const DEFINITION_NOTES: Record<string, string> = {
   M16: 'Base: the 33 Legal and Lawyer users active in the last 7 days.',
   M20: 'Window: the selected period.',
 };
+
+/**
+ * The time window behind each metric's headline. "period" follows the 30/90/180-day toggle;
+ * anything else is fixed by the metric's definition, and the card says so.
+ */
+export const WINDOW: Record<string, 'period' | string> = {
+  M01: 'period', M02: 'Last 7 days', M03: 'Calendar month', M04: 'Last 7 days', M05: 'Today',
+  M06: 'Last 30 days', M07: 'Since each invite', M08: 'Last 90 days', M09: 'Last 90 days', M10: 'Last 90 days',
+  M11: 'Cases added in last 90 days', M12: 'Today', M13: 'period', M14: 'Right now', M15: 'Today',
+  M16: 'period', M17: '1 Oct to 7 Nov', M18: 'period', M19: 'Weekly sample', M20: 'period',
+  M21: 'period', M22: 'period', M23: 'Last 90 days', M24: 'Today', M25: 'Last 7 days', M26: 'period', M27: 'period',
+  U01: 'Last 8 weeks', U02: 'Latest 20 actions', U03: 'period',
+};
+/** Metrics with a fixed headline whose trend line still follows the period. */
+export const TREND_FOLLOWS_PERIOD = new Set(['M02', 'M04', 'M05', 'M12', 'M15', 'M19']);

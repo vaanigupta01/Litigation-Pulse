@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useApp } from '../app/state';
 import { DEFINITION_NOTES, LENS_LABEL, STAGE_COLOR, TIER_LABEL, lensMatches, metric, stageOf, USER_ONLY } from '../lib/metrics';
-import { Chip } from './ui';
+import { Chip, WindowChip } from './ui';
 
 interface Props {
   id: string; // metric id (M01..M27) or U01..U03
@@ -14,11 +14,13 @@ interface Props {
   note?: ReactNode; // small context line under the chart
   drillable?: boolean;
   scopeLabel?: string;
+  /** DOM anchor; defaults to card-<id>. Set when a view shows the same metric twice. */
+  anchor?: string;
 }
 
 /** Every chart lives in one of these: title, question caption, flip-to-rationale, tier and lens chips. */
-export function ChartCard({ id, children, className = '', caption, headline, note, drillable, scopeLabel }: Props) {
-  const { lens } = useApp();
+export function ChartCard({ id, children, className = '', caption, headline, note, drillable, scopeLabel, anchor }: Props) {
+  const { lens, period } = useApp();
   const [flipped, setFlipped] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const m = id.startsWith('U') ? null : metric(id);
@@ -42,7 +44,7 @@ export function ChartCard({ id, children, className = '', caption, headline, not
       ]
     : [['Question it answers', u!.question], ['Why this chart', `${u!.chart}. ${u!.chart_why}`]];
   return (
-    <div id={`card-${id}`} ref={ref} className={`flip min-w-0 scroll-mt-28 ${flipped ? 'is-flipped' : ''} ${className}`} style={{ ['--pulse' as string]: color }} data-card>
+    <div id={anchor ?? `card-${id}`} ref={ref} className={`flip min-w-0 scroll-mt-28 ${flipped ? 'is-flipped' : ''} ${className}`} style={{ ['--pulse' as string]: color }} data-card>
       <div className="flip-inner">
         <section className="flip-face card flex h-full flex-col p-5 sm:p-6" aria-hidden={flipped}>
           <header className="flex items-start justify-between gap-3">
@@ -65,6 +67,7 @@ export function ChartCard({ id, children, className = '', caption, headline, not
             <div className="flex flex-wrap gap-1.5">
               {m && <Chip color={m.tier === 'north-star' ? color : undefined}>{TIER_LABEL[m.tier]}</Chip>}
               {m && <Chip>{LENS_LABEL[m.lens]}</Chip>}
+              <WindowChip id={id} period={period} />
               {drillable && <Chip>Click a mark to drill in</Chip>}
             </div>
             <span className="text-[11px] text-muted">{m ? (m.refresh.startsWith('Daily') ? 'Updated daily' : `Updated ${m.refresh.toLowerCase()}`) : 'Updated daily'}</span>

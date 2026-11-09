@@ -49,7 +49,7 @@ export function OrgView() {
   const sp = q.spendCapture(ORG);
   const cs = q.contractShare(ORG);
   const pl = q.pageLoads();
-  const rl = q.rateLimits(30);
+  const rl = q.rateLimits(period);
   const sync = q.syncFreshness();
   const mehra = lag.rows.find((r) => r.id === 'firm-mehra')!;
   const dil = ai.rows.find((r) => r.id === 'ai_diligence')!;
@@ -64,7 +64,7 @@ export function OrgView() {
         <SectionNav items={NAV} />
         <div className="min-w-0 flex-1">
           <div className="grid gap-4 pt-4 lg:grid-cols-2">
-            <ChartCard id="M01" className="lg:col-span-2" headline={<Head items={[[pc(co.rate), `closed out in ${period} days`], [pc(co.inhouse.rate), 'in-house'], [pc(co.counsel.rate), 'counsel-owned']]} />} note="Counsel-owned hearings fell away after Mehra & Associates took over the Sales dealer disputes on 1 Aug. In-house stays close to target.">
+            <ChartCard id="M01" className="lg:col-span-2" headline={<Head items={[[pc(co.rate), `closed out in ${period} days`], [pc(co.inhouse.rate), 'in-house'], [pc(co.counsel.rate), 'counsel-owned']]} />} note={`Counsel-owned hearings fell away after Mehra & Associates took over the Sales dealer disputes on 1 Aug. In-house stays close to target.${period === 30 ? ' Switch to 180 days to see the August bend.' : ''} ${q.bucketNote(period)}`}>
               <CloseOutTrend scope={ORG} height={260} />
             </ChartCard>
             <ChartCard id="M02" headline={<Head items={[[pc(w.rate), `${w.active} of ${w.seats} seats`]]} />} note="A meaningful action means more than a login: recording, creating or updating something.">
@@ -104,7 +104,7 @@ export function OrgView() {
               <Dumbbell scope={ORG} />
             </ChartCard>
             <ChartCard id="M12" note="Above 90%, priority cannot help anyone choose what to work on.">
-              <NumberSpark value={pc(dp.rate)} sub={`${dp.n} of ${dp.total} active cases still at the default "High"`} series={dp.series.map((s) => s.rate)} color="var(--enrich)" labels={[dp.series[0].week, 'now']} />
+              <NumberSpark value={pc(dp.rate)} sub={`${dp.n} of ${dp.total} active cases still at the default "High"`} series={q.defaultPriorityTrend(period).map((s) => s.rate)} color="var(--enrich)" labels={[q.buckets(period)[0].label, 'now']} />
             </ChartCard>
           </Section>
 
@@ -134,7 +134,7 @@ export function OrgView() {
               <AccuracyLine />
             </ChartCard>
             <ChartCard id="M20" note="A proxy: Insights text is not clickable yet, so we look for a matching filtered case list within 10 minutes.">
-              <NumberSpark value={pc(ft.rate)} sub={`${ft.followed} of ${ft.sessions} Insights sessions in ${period} days`} series={ft.weekly.map((x) => x.rate)} color="var(--ai)" labels={[`week of ${ft.weekly[0].week}`, 'this week']} />
+              <NumberSpark value={pc(ft.rate)} sub={`${ft.followed} of ${ft.sessions} Insights sessions in ${period} days`} series={q.followThroughTrend(period).map((x) => x.rate)} color="var(--ai)" labels={[q.buckets(period)[0].label, 'now']} />
             </ChartCard>
           </Section>
 
@@ -157,7 +157,7 @@ export function OrgView() {
             <ChartCard id="M25" headline={<Head items={[[`${pl[0].p95.toFixed(1)} s`, `${pl[0].page}, p95 last 7 days`]]} />}>
               <PageLoadBars />
             </ChartCard>
-            <ChartCard id="M26" headline={<Head items={[[rl.avg.toFixed(1), 'per 100 sessions'], [rl.monday.toFixed(1), 'Monday 09:00 to 11:00']]} />} note="Dots mark Mondays; the dashed line is the alert at 5 per 100 sessions. Last 90 days.">
+            <ChartCard id="M26" headline={<Head items={[[rl.avg.toFixed(1), 'per 100 sessions'], [rl.monday.toFixed(1), 'Monday 09:00 to 11:00']]} />} note="Dots mark Mondays; the dashed line is the alert at 5 per 100 sessions.">
               <RateLimitLine />
             </ChartCard>
             <ChartCard id="M27" className="lg:col-span-2" note='The Codex miss "matters linked to dealer agreement" asks for the contract link that M24 sizes.'>

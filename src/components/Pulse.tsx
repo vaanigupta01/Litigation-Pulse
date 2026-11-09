@@ -4,7 +4,7 @@ import type { Period } from '../lib/dates';
 import { LENS_LABEL, STAGE_COLOR, TIER_LABEL, lensMatches, metric, stageOf } from '../lib/metrics';
 import { q } from '../lib/q';
 import { ORG, type Scope, type Status } from '../lib/selectors';
-import { Chip, Delta, Sparkline, StatusPill, pc, nf } from './ui';
+import { Chip, Delta, Sparkline, StatusPill, WindowChip, pc, nf } from './ui';
 
 interface TileProps {
   id: string;
@@ -21,7 +21,7 @@ interface TileProps {
 }
 
 export function PulseTile({ id, value, context, delta, series, status, big, orgTick, accountWide, target }: TileProps) {
-  const { lens } = useApp();
+  const { lens, period } = useApp();
   const m = metric(id);
   const [flip, setFlip] = useState(false);
   const color = `var(--${STAGE_COLOR[stageOf(id)]})`;
@@ -33,7 +33,7 @@ export function PulseTile({ id, value, context, delta, series, status, big, orgT
   }, [flip]);
   if (!lensMatches(lens, m.lens)) return null;
   return (
-    <div id={`card-${id}`} className={`flip scroll-mt-28 ${flip ? 'is-flipped' : ''} ${big ? 'sm:col-span-2' : ''}`} style={{ ['--pulse' as string]: color }}>
+    <div id={`tile-${id}`} className={`flip scroll-mt-28 ${flip ? 'is-flipped' : ''} ${big ? 'sm:col-span-2' : ''}`} style={{ ['--pulse' as string]: color }}>
       <div className="flip-inner">
         <section className="flip-face card flex h-full flex-col p-5" aria-hidden={flip}>
           <div className="flex items-start justify-between gap-2">
@@ -60,9 +60,10 @@ export function PulseTile({ id, value, context, delta, series, status, big, orgT
           )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
             <StatusPill s={status} />
-            <div className="flex gap-1">
+            <div className="flex flex-wrap justify-end gap-1">
               <Chip>{TIER_LABEL[m.tier]}</Chip>
               {accountWide && <Chip>Account-wide</Chip>}
+              <WindowChip id={id} period={period} compact />
             </div>
           </div>
         </section>
