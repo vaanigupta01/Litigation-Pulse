@@ -1,28 +1,29 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../app/state';
-import { DEFINITION_NOTES, LENS_LABEL, STAGE_COLOR, TIER_LABEL, lensMatches, metric, stageOf, USER_ONLY } from '../lib/metrics';
-import { Chip, WindowChip } from './ui';
+import { CARD_LINE, DEFINITION_NOTES, STAGE_COLOR, lensMatches, metric, stageOf, USER_ONLY } from '../lib/metrics';
+import { WindowChip } from './ui';
 
 interface Props {
   id: string; // metric id (M01..M27) or U01..U03
   children: ReactNode;
   className?: string;
-  /** Override the subtitle (default: the metric's question) */
-  caption?: string;
+  /** Replaces the metric name when a view shows a second cut of the same metric */
+  title?: string;
   /** Headline numbers shown at the top of the card */
   headline?: ReactNode;
-  note?: ReactNode; // small context line under the chart
-  drillable?: boolean;
+  note?: ReactNode; // one line of insight under the chart
   scopeLabel?: string;
   /** DOM anchor; defaults to card-<id>. Set when a view shows the same metric twice. */
   anchor?: string;
+  /** "Break it down": the pattern behind the number, opened inside the same card */
+  more?: ReactNode;
 }
 
-/** Every chart lives in one of these: title, question caption, flip-to-rationale, tier and lens chips. */
-export function ChartCard({ id, children, className = '', caption, headline, note, drillable, scopeLabel, anchor }: Props) {
+/** Every chart lives in one of these. The front stays quiet; the "i" flip carries the rationale, window and refresh. */
+export function ChartCard({ id, children, className = '', title, headline, note, scopeLabel, anchor, more }: Props) {
   const { lens, period } = useApp();
   const [flipped, setFlipped] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const m = id.startsWith('U') ? null : metric(id);
   const u = id.startsWith('U') ? USER_ONLY.find((x) => x.id === id)! : null;
   const color = `var(--${STAGE_COLOR[m ? stageOf(id) : 'pulse']})`;
@@ -33,8 +34,7 @@ export function ChartCard({ id, children, className = '', caption, headline, not
     return () => removeEventListener('keydown', on, true);
   }, [flipped]);
   if (m && !lensMatches(lens, m.lens)) return null;
-  const name = m?.name ?? u!.name;
-  const question = caption ?? m?.question ?? u!.question;
+  const name = title ?? m?.name ?? u!.name;
   const back = m
     ? [
         ['Question it answers', m.question],
@@ -44,38 +44,34 @@ export function ChartCard({ id, children, className = '', caption, headline, not
       ]
     : [['Question it answers', u!.question], ['Why this chart', `${u!.chart}. ${u!.chart_why}`]];
   return (
-    <div id={anchor ?? `card-${id}`} ref={ref} className={`flip min-w-0 scroll-mt-28 ${flipped ? 'is-flipped' : ''} ${className}`} style={{ ['--pulse' as string]: color }} data-card>
+    <div id={anchor ?? `card-${id}`} className={`flip min-w-0 scroll-mt-28 ${flipped ? 'is-flipped' : ''} ${className}`} style={{ ['--pulse' as string]: color }} data-card>
       <div className="flip-inner">
         <section className="flip-face card flex h-full flex-col p-5 sm:p-6" aria-hidden={flipped}>
           <header className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="text-[15px] font-semibold leading-snug text-ink">
-                <span className="mr-2 font-mono text-[11px] font-normal text-muted">{id}</span>
-                {name}
-                {scopeLabel && <span className="ml-2 text-[12px] font-normal text-muted">· {scopeLabel}</span>}
-              </h3>
-              <p className="mt-1 text-[13px] leading-snug text-muted">{question}</p>
-            </div>
-            <button onClick={() => setFlipped(true)} aria-label={`Why ${name}? Show rationale`} title="Why this metric" className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hairline text-[13px] font-semibold text-muted transition hover:text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
+            <h3 className="min-w-0 text-[15px] font-semibold leading-snug text-ink">
+              {name}
+              {scopeLabel && <span className="ml-2 text-[12px] font-normal text-muted">· {scopeLabel}</span>}
+            </h3>
+            <button onClick={() => setFlipped(true)} aria-label={`About ${name}`} className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hairline text-[13px] font-semibold text-muted transition hover:text-ink" style={{ fontFamily: 'var(--font-serif)' }}>
               i
             </button>
           </header>
-          {headline && <div className="mt-4">{headline}</div>}
+          {headline && <div className="mt-3">{headline}</div>}
           <div className="mt-4 min-h-0 flex-1">{children}</div>
           {note && <div className="mt-3 text-[12px] leading-snug text-muted">{note}</div>}
-          <footer className="mt-4 flex flex-wrap items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5">
-              {m && <Chip color={m.tier === 'north-star' ? color : undefined}>{TIER_LABEL[m.tier]}</Chip>}
-              {m && <Chip>{LENS_LABEL[m.lens]}</Chip>}
-              <WindowChip id={id} period={period} />
-              {drillable && <Chip>Click a mark to drill in</Chip>}
+          {more && (
+            <div className="mt-4">
+              <button onClick={() => setOpen((o) => !o)} aria-expanded={open} className="flex items-center gap-1.5 text-[12px] font-medium" style={{ color }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden style={{ transform: open ? 'rotate(90deg)' : undefined, transition: 'transform 160ms' }}><path d="M3 1l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
+                Break it down
+              </button>
+              {open && <div className="mt-3 rounded-xl border border-hairline bg-surface-2 p-4">{more}</div>}
             </div>
-            <span className="text-[11px] text-muted">{m ? (m.refresh.startsWith('Daily') ? 'Updated daily' : `Updated ${m.refresh.toLowerCase()}`) : 'Updated daily'}</span>
-          </footer>
+          )}
         </section>
         <section className="flip-face flip-back card p-5 sm:p-6" aria-hidden={!flipped}>
           <div className="flex items-start justify-between gap-3">
-            <h3 className="text-[15px] font-semibold"><span className="mr-2 font-mono text-[11px] font-normal text-muted">{id}</span>{name}</h3>
+            <h3 className="text-[15px] font-semibold">{name}</h3>
             <button onClick={() => setFlipped(false)} aria-label="Back to chart" className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hairline text-[14px] text-muted hover:text-ink">×</button>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -95,6 +91,7 @@ export function ChartCard({ id, children, className = '', caption, headline, not
               <a href={`#/dictionary/${id}`} className="inline-block pt-1 font-medium" style={{ color }}>Full entry in dictionary →</a>
             </div>
           )}
+          <div className="mt-3 flex flex-wrap gap-1.5"><WindowChip id={id} period={period} line={CARD_LINE.has(id)} /></div>
         </section>
       </div>
     </div>

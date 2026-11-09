@@ -108,7 +108,7 @@ export function SyncBars() {
           <span className="num text-right font-medium">{pc(r.rate)}</span>
         </div>
       ))}
-      <div className="flex justify-between pl-[122px] text-[11px] text-muted"><span>Sync failure rate {pc(s.failureRate, 1)} of runs</span><span>| Target 95%</span></div>
+      <div className="pl-[122px] text-right text-[11px] text-muted">| Target 95%</div>
     </div>
   );
 }
@@ -148,7 +148,6 @@ export function TtfvDots({ scope }: { scope: Scope }) {
         </div>
       ))}
       <div className="flex justify-between pl-[84px] pr-[108px] text-[11px] text-muted"><span>0 days</span><span>{Math.round(max)} days</span></div>
-      <p className="pl-[84px] text-[11px] leading-snug text-muted"><b className="text-ink">Dot</b>: the typical person (median), half took less time and half took more. <b className="text-ink">Line</b>: where the middle half of people sit. A quarter of people were faster than its left end and a quarter slower than its right end.</p>
     </div>
   );
 }
@@ -156,28 +155,27 @@ export function TtfvDots({ scope }: { scope: Scope }) {
 // ------------------------------------------------------------------ M08 funnel
 export function IntakeFunnel() {
   const f = q.intakeFunnel();
-  const rows = [
-    { label: 'Suggested', v: f.suggested, drop: null as null | [string, number] },
-    { label: 'Reviewed', v: f.reviewed, drop: ['Expired unread', f.expired] as [string, number] },
-    { label: 'Accepted', v: f.accepted, drop: ['Deleted as false match', f.deleted] as [string, number] },
+  const rows: { label: string; v: number; lost?: [number, string]; tint: number }[] = [
+    { label: 'Suggested', v: f.suggested, tint: 30 },
+    { label: 'Reviewed', v: f.reviewed, lost: [f.expired, 'expired unread'], tint: 55 },
+    { label: 'Accepted', v: f.accepted, lost: [f.deleted, 'deleted as false matches'], tint: 100 },
   ];
   return (
-    <div className="space-y-3">
-      {rows.map((r, i) => (
+    <div>
+      {rows.map((r) => (
         <div key={r.label}>
-          {r.drop && (
-            <div className="mb-1 ml-[96px] flex items-center gap-2 text-[11px] text-muted">
-              <span>↘ {r.drop[0]}</span><b className="num text-ink">{nf(r.drop[1])}</b><span>({pc(r.drop[1] / rows[i - 1].v)} of previous step)</span>
+          {r.lost && (
+            <div className="flex items-center gap-2 py-1.5 pl-[3px] text-[12px] text-muted">
+              <span className="h-5 w-px bg-hairline" aria-hidden />
+              <span className="num font-semibold text-ink">−{nf(r.lost[0])}</span>
+              <span>{r.lost[1]}</span>
             </div>
           )}
-          <div className="grid grid-cols-[84px_1fr_56px] items-center gap-3 text-[13px]">
-            <span className="text-muted">{r.label}</span>
-            <div className="h-6 rounded-md" style={{ width: `${(r.v / f.suggested) * 100}%`, background: i === 2 ? 'var(--intake)' : `color-mix(in srgb, var(--intake) ${i === 0 ? 30 : 55}%, transparent)` }} />
-            <span className="num text-right font-semibold">{nf(r.v)}</span>
-          </div>
+          <div className="flex items-baseline justify-between text-[13px]"><span className="text-muted">{r.label}</span><span className="num font-semibold">{nf(r.v)}</span></div>
+          <div className="mt-1 h-5 rounded-md" style={{ width: `${(r.v / f.suggested) * 100}%`, background: `color-mix(in srgb, var(--intake) ${r.tint}%, transparent)` }} />
         </div>
       ))}
-      <div className="pl-[96px] text-[11px] text-muted">Accepted = {f.added} added as new cases + {f.mapped} mapped to existing ones</div>
+      <div className="mt-2 text-[12px] text-muted"><span className="num text-ink">{f.added}</span> added as new cases · <span className="num text-ink">{f.mapped}</span> mapped to existing ones</div>
     </div>
   );
 }
@@ -186,16 +184,17 @@ export function IntakeFunnel() {
 export function PrecisionBars() {
   const p = q.intakePrecision();
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {[...p.rows].sort((a, b) => a.precision - b.precision).map((r) => (
-        <div key={r.id} className="grid grid-cols-[136px_1fr_44px] items-center gap-3 text-[13px]">
-          <span className="leading-tight text-muted">{r.label}<br /><span className="text-[11px]"><b className="text-ink">{r.accepted}</b> real of <b className="text-ink">{r.reviewed}</b> reviewed · {nf(r.suggested)} suggested</span></span>
-          <div className="relative"><Bar value={r.precision} max={1} color={r.precision < 0.25 ? 'var(--intake)' : 'var(--quiet)'} height={12} /><span className="absolute top-[-3px] h-[18px] w-px bg-ink/50" style={{ left: '25%' }} /></div>
-          <span className="num text-right font-medium">{pc(r.precision)}</span>
+        <div key={r.id} title={`${r.accepted} accepted of ${r.reviewed} reviewed · ${nf(r.suggested)} suggested`}>
+          <div className="flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="text-ink">{r.label}</span>
+            <span className="num whitespace-nowrap"><span className="text-[12px] text-muted">{r.accepted} of {r.reviewed}</span> <b className="ml-1.5">{pc(r.precision)}</b></span>
+          </div>
+          <div className="relative mt-1.5"><Bar value={r.precision} max={1} color={r.precision < 0.25 ? 'var(--intake)' : 'var(--quiet)'} height={10} /><span className="absolute top-[-3px] h-4 w-px bg-ink/50" style={{ left: '25%' }} /></div>
         </div>
       ))}
-      <div className="flex justify-between pl-[148px] text-[11px] text-muted"><span>| Alert line 25%</span><span>Overall {pc(p.overall)}</span></div>
-      <p className="text-[11px] leading-snug text-muted">Precision = suggestions accepted as real cases (added or mapped) ÷ suggestions someone reviewed. Brand names: 32 ÷ 180 = 18%. Suggestions nobody opened are left out.</p>
+      <div className="text-[11px] text-muted">Real cases of those reviewed · | alert line 25%</div>
     </div>
   );
 }
@@ -239,7 +238,7 @@ export function SpendBars({ highlight }: { highlight?: string }) {
 }
 export function ContractBars({ highlight }: { highlight?: string }) {
   const c = q.contractShare(ORG);
-  return <BuBars rows={c.byBu.map((b) => ({ ...b, a: b.contract, b: b.total }))} color="value" target={c.rate} targetLabel={`Account average ${pc(c.rate)}`} highlight={highlight} colorAll unit={(r) => `${r.a} of ${r.b} active cases`} />;
+  return <BuBars rows={c.byBu.map((b) => ({ ...b, a: b.contract, b: b.total }))} color="value" target={c.rate} targetLabel="Account average" highlight={highlight} colorAll unit={(r) => `${r.a} of ${r.b} active cases`} />;
 }
 
 // ------------------------------------------------------------------ M11 dumbbell
@@ -336,7 +335,7 @@ export function DormantArea({ scope, height = 200 }: { scope: Scope; height?: nu
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis {...axisProps(t)} allowDecimals={false} />
         <Tooltip content={<Tip render={(p) => ({ title: period === 30 ? String(p.week) : `Week of ${p.week}`, rows: [['Dormant cases', String(p.count), t.hearing], ['Share of active', pc(p.share as number)]] })} />} />
-        <Area dataKey="count" stroke={t.hearing} strokeWidth={1.75} fill="url(#dormFill)" {...anim} label={(p: LP) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`${d.count} · ${pc(d.share)}`} color={t.hearing} />} />
+        <Area dataKey="count" stroke={t.hearing} strokeWidth={1.75} fill="url(#dormFill)" {...anim} label={(p: LP) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="" color={t.hearing} />} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -410,8 +409,8 @@ export function RejectionLines({ period, height = 220 }: { period: Period; heigh
         {model && <ReferenceLine x={model} stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Model update 14 Sep', position: 'insideTopLeft', fill: t.ink, fontSize: 11 }} />}
         <ReferenceLine y={0.1} stroke={t.ai} strokeOpacity={0.7} strokeDasharray="2 4" label={{ value: 'Thumbs-down alert 10%', position: 'insideBottomLeft', fill: t.ai, fontSize: 10 }} />
         <Tooltip content={<Tip render={(p) => ({ title: ptTitle(period, p.week), rows: [['Regenerated', pc(p.regenerate as number, 1), t.muted], ['Thumbs-down', pc(p.thumbs as number, 1), t.ai]] })} />} />
-        <Line dataKey="regenerate" stroke={t.muted} strokeOpacity={0.6} strokeWidth={1.5} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Regenerate ${pc(r.regenerate)}`} color={t.muted} />} />
-        <Line dataKey="thumbs" stroke={t.ai} strokeWidth={2} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Thumbs-down ${pc(r.thumbs)}`} color={t.ai} />} />
+        <Line dataKey="regenerate" stroke={t.muted} strokeOpacity={0.6} strokeWidth={1.5} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="Regenerate" color={t.muted} />} />
+        <Line dataKey="thumbs" stroke={t.ai} strokeWidth={2} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text="Thumbs-down" color={t.ai} />} />
       </LineChart>
     </ResponsiveContainer>
   );

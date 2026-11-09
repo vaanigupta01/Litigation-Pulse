@@ -110,20 +110,20 @@ export function UserView({ id }: { id: string }) {
         </div>
       </header>
 
-      <ChartCard id="U03" className="mb-4" caption={`Is this person above or below the ${team.short} ${u.role} median on the key rates? (last ${period} days)`}>
+      <ChartCard id="U03" className="mb-4" scopeLabel={`${team.short} ${u.role} users, last ${period} days`}>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
           {u.role === 'Business' && al ? (
             <>
               <Compare label="Alerts received" value={al.sent} median={NaN} fmt={(x) => String(x)} max={al.sent} />
-              <Compare label="Alert follow-through (M22)" value={al.rate} median={q.alertFollowThrough(q.teamScope(u.team_id), period).rate} fmt={(x) => pc(x)} max={1} />
+              <Compare label="Alert follow-through" value={al.rate} median={q.alertFollowThrough(q.teamScope(u.team_id), period).rate} fmt={(x) => pc(x)} max={1} />
             </>
           ) : (
             <>
-              <Compare label="Matters owned (M05)" value={isOps ? k.owned : null} median={med.owned} fmt={(x) => String(Math.round(x))} max={20} />
+              <Compare label="Matters owned" value={isOps ? k.owned : null} median={med.owned} fmt={(x) => String(Math.round(x))} max={20} />
               <Compare label={`Hearings in ${period} days`} value={isOps ? k.hearings : null} median={med.hearings} fmt={(x) => String(Math.round(x))} max={10} />
-              <Compare label="Close-out rate (M01)" value={k.closeOut} median={med.closeOut} fmt={(x) => pc(x)} max={1} />
-              <Compare label="Awaiting update (M14)" value={isOps ? k.awaiting : null} median={med.awaiting} fmt={(x) => String(Math.round(x))} max={6} lowerBetter />
-              <Compare label={`AI actions (M16)`} value={isOps || u.role === 'Admin' ? k.aiActions : null} median={med.aiActions} fmt={(x) => String(Math.round(x))} max={10} />
+              <Compare label="Close-out rate" value={k.closeOut} median={med.closeOut} fmt={(x) => pc(x)} max={1} />
+              <Compare label="Awaiting update" value={isOps ? k.awaiting : null} median={med.awaiting} fmt={(x) => String(Math.round(x))} max={6} lowerBetter />
+              <Compare label={`AI actions`} value={isOps || u.role === 'Admin' ? k.aiActions : null} median={med.aiActions} fmt={(x) => String(Math.round(x))} max={10} />
             </>
           )}
         </div>
@@ -139,7 +139,7 @@ export function UserView({ id }: { id: string }) {
             <CloseOutTrend scope={userScope(id)} height={220} />
           </ChartCard>
         )}
-        <ChartCard id="M16" caption="Which AI features does this person use, and do they act on the output?" scopeLabel="this person">
+        <ChartCard id="M16" title="AI usage by feature">
           {ai.length ? (
             <table className="w-full text-[13px]">
               <thead><tr className="border-b border-hairline text-left text-[12px] text-muted"><th className="py-1.5 font-medium">Feature</th><th className="font-medium">Uses</th><th className="font-medium">Action rate</th><th className="text-right font-medium">Credits</th></tr></thead>
@@ -170,7 +170,7 @@ export function UserView({ id }: { id: string }) {
 function AwaitingList({ uid }: { uid: string }) {
   const list = q.userHearingList(uid);
   return (
-    <ChartCard id="M14" caption="Past hearings on this person's cases with no outcome recorded, and how many days overdue each is." scopeLabel={`${list.length} open`}>
+    <ChartCard id="M14"  scopeLabel={`${list.length} open`}>
       {list.length ? (
         <ul className="max-h-[360px] divide-y divide-hairline overflow-auto text-[13px]">
           {list.map((h) => (
@@ -187,7 +187,7 @@ function AwaitingList({ uid }: { uid: string }) {
 function LawyerCases({ uid }: { uid: string }) {
   const list = q.lawyerCases(uid);
   return (
-    <ChartCard id="M14" caption="Cases assigned to this lawyer, with their last hearing and whether its outcome is still missing." scopeLabel={`${list.length} cases`}>
+    <ChartCard id="M14" title="Assigned cases" scopeLabel={`${list.length} cases`}>
       <ul className="max-h-[360px] divide-y divide-hairline overflow-auto text-[13px]">
         {list.map((c) => (
           <li key={c.id} className="flex items-center justify-between gap-3 py-2">

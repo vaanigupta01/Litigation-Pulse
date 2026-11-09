@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useApp } from '../app/state';
 import type { Period } from '../lib/dates';
-import { LENS_LABEL, STAGE_COLOR, TIER_LABEL, lensMatches, metric, stageOf } from '../lib/metrics';
+import { LENS_LABEL, STAGE_COLOR, TILE_LINE, lensMatches, metric, stageOf } from '../lib/metrics';
 import { q } from '../lib/q';
 import { ORG, type Scope, type Status } from '../lib/selectors';
 import { Chip, Delta, Sparkline, StatusPill, WindowChip, pc, nf } from './ui';
@@ -37,10 +37,7 @@ export function PulseTile({ id, value, context, delta, series, status, big, orgT
       <div className="flip-inner">
         <section className="flip-face card flex h-full flex-col p-5" aria-hidden={flip}>
           <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2 text-[13px] font-semibold text-ink"><span className="font-mono text-[11px] font-normal text-muted">{id}</span>{m.name}</div>
-              {big && <div className="mt-0.5 text-[12px] text-muted">{m.question}</div>}
-            </div>
+            <div className="text-[13px] font-semibold text-ink">{m.name}</div>
             <button onClick={() => setFlip(true)} aria-label={`Why ${m.name}?`} className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-hairline text-[13px] font-semibold text-muted hover:text-ink" style={{ fontFamily: 'var(--font-serif)' }}>i</button>
           </div>
           <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-1">
@@ -58,14 +55,7 @@ export function PulseTile({ id, value, context, delta, series, status, big, orgT
               <div className="mt-1 text-[11px] text-muted">Org average {orgTick.label}</div>
             </div>
           )}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-1.5">
-            <StatusPill s={status} />
-            <div className="flex flex-wrap justify-end gap-1">
-              <Chip>{TIER_LABEL[m.tier]}</Chip>
-              {accountWide && <Chip>Account-wide</Chip>}
-              <WindowChip id={id} period={period} compact />
-            </div>
-          </div>
+          <div className="mt-3"><StatusPill s={status} /></div>
         </section>
         <section className="flip-face flip-back card p-5 text-[12px]" aria-hidden={!flip}>
           <div className="flex items-start justify-between"><div className="text-[13px] font-semibold">{m.name}</div><button onClick={() => setFlip(false)} aria-label="Back" className="grid h-7 w-7 place-items-center rounded-full border border-hairline text-muted">×</button></div>
@@ -77,6 +67,7 @@ export function PulseTile({ id, value, context, delta, series, status, big, orgT
           </dl>
           <p className="mt-2 text-muted">{m.definition} {LENS_LABEL[m.lens]} lens · {m.refresh}. Alert: {m.alert}.</p>
           <a href={`#/dictionary/${id}`} className="mt-1 inline-block font-medium" style={{ color }}>Full entry in dictionary →</a>
+          <div className="mt-2 flex flex-wrap gap-1"><WindowChip id={id} period={period} line={TILE_LINE.has(id)} />{accountWide && <Chip>Account-wide</Chip>}</div>
         </section>
       </div>
     </div>
@@ -103,7 +94,7 @@ export function PulseRow({ scope, period }: { scope: Scope; period: Period }) {
         delta={<Delta now={p.M03.value} prev={p.M03.prev} unit="days" invert={false} fmt={(d) => `${Math.abs(d)} days earlier`} vs="September" />}
         context={<>October limit of {nf(6000)} credits · September day {p.M03.prev} · November on course for day {p.M03.run.projected}</>} series={p.M03.series} />
       <PulseTile id="M04" value={pc(p.M04.value)} status={p.M04.status} accountWide={!!org} delta={<Delta now={p.M04.value} prev={p.M04.prev} vs="previous week" />}
-        context={<>Only {pc(p.M04.value)} of {p.M04.sync.worst.court.toLowerCase()} cases had data refreshed from the court in the last 24 hours (the worst court type). High Courts {pc(p.M04.sync.byCourt.find((c) => c.court === 'High Court')!.rate)}</>} series={p.M04.series} target={0.95} />
+        context={<>of {p.M04.sync.worst.court.toLowerCase()} cases synced in the last 24 hours, the worst court type · High Courts {pc(p.M04.sync.byCourt.find((c) => c.court === 'High Court')!.rate)}</>} series={p.M04.series} target={0.95} />
       <PulseTile id="M05" value={nf(p.M05.value)} status="info" delta={<Delta now={p.M05.value} prev={p.M05.prev} unit="n" vs={`${period} days ago`} />}
         context={scope.kind === 'org' ? <>{p.M05.am.byBu.map((b) => `${b.short} ${b.count}`).join(' · ')}</> : isFirm ? <>Live cases assigned to this firm</> : <>Live cases this unit is responsible for</>} series={p.M05.series}
         orgTick={org && !isFirm ? { label: `${nf(Math.round(org.M05.value / 4))} per business unit`, team: p.M05.value, org: org.M05.value / 4, max: Math.max(p.M05.value, org.M05.value / 4) * 1.2 } : undefined} />

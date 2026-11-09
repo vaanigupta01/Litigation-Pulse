@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { TREND_FOLLOWS_PERIOD, WINDOW } from '../lib/metrics';
+import { WINDOW } from '../lib/metrics';
 import type { Status } from '../lib/selectors';
 
 export const pc = (x: number | null | undefined, d = 0) => (x === null || x === undefined || Number.isNaN(x) ? '—' : `${(x * 100).toFixed(d)}%`);
@@ -110,32 +110,17 @@ export function Bar({ value, max, color, height = 10, ghost }: { value: number; 
   );
 }
 
-/** Says which time window a card's number covers, and whether the period toggle moves it. */
-export function WindowChip({ id, period, compact }: { id: string; period: number; compact?: boolean }) {
+/** Says which time window a number covers, and whether the period toggle moves it. Shown inside the "i" view. */
+export function WindowChip({ id, period, line }: { id: string; period: number; line?: boolean }) {
   const w = WINDOW[id];
   if (!w) return null;
-  if (w === 'period') {
-    return (
-      <span title="Follows the 30 / 90 / 180-day toggle" className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-medium text-canvas whitespace-nowrap">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-        Last {period} days
-      </span>
-    );
-  }
-  const trend = TREND_FOLLOWS_PERIOD.has(id);
+  const dark = 'inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-medium text-canvas whitespace-nowrap';
+  if (w === 'period') return <span title="Follows the 30 / 90 / 180-day toggle" className={dark}>Last {period} days</span>;
   const label = w.charAt(0).toLowerCase() + w.slice(1);
   return (
     <>
-      <span title="The number is defined on a fixed window, so the period toggle does not change it." className="inline-flex items-center gap-1 rounded-md border border-dashed border-hairline px-1.5 py-0.5 text-[11px] text-muted whitespace-nowrap">
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-        {trend ? 'Number' : 'Fixed'}: {label}
-      </span>
-      {trend && (
-        <span title="The line shows how this number moved across the selected period." className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-medium text-canvas whitespace-nowrap">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><path d="M3 17l6-6 4 4 8-8" /></svg>
-          Line: {compact ? `${period}d` : `last ${period} days`}
-        </span>
-      )}
+      <span title="Defined on a fixed window, so the period toggle does not change it." className="inline-flex items-center gap-1 rounded-md border border-dashed border-hairline px-1.5 py-0.5 text-[11px] text-muted whitespace-nowrap">{line ? 'Number' : 'Fixed'}: {label}</span>
+      {line && <span title="The line shows how this number moved across the selected period." className={dark}>Line: last {period} days</span>}
     </>
   );
 }

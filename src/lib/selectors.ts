@@ -749,3 +749,71 @@ export function reachTrend(period: Period) {
 export function accuracyTrend(period: Period) {
   return summaryAccuracy().rows.filter((r, i) => dayOf(evals[i].week_start) + 6 >= periodStart(period));
 }
+
+// ------------------------------------------------------------------ breakdowns ("Break it down" panels)
+export function intakePatterns() {
+  const s = resolvedIn90;
+  const groups = KEYWORD_GROUPS.map((g) => {
+    const x = s.filter((r) => r.keyword_group === g.id);
+    const expired = x.filter((r) => r.state === 'expired').length, deleted = x.filter((r) => r.state === 'deleted').length;
+    const reviewed = x.length - expired, accepted = reviewed - deleted;
+    const precision = pct(accepted, reviewed);
+    return { id: g.id, label: g.label, suggested: x.length, reviewed, accepted, deleted, expired, reviewRate: pct(reviewed, x.length), precision, likelyReal: Math.round(expired * precision) };
+  });
+  const reviewed = s.filter((r) => r.state !== 'expired');
+  const lags = reviewed.map((r) => dayOf(r.triaged_on!) - dayOf(r.shown_on));
+  const defs: [string, number, number][] = [['Same day', 0, 0], ['1 to 3 days', 1, 3], ['4 to 7 days', 4, 7], ['8 to 14 days', 8, 14], ['15 days or more', 15, 999]];
+  const speed = defs.map(([label, a, b]) => ({ label, count: lags.filter((l) => l >= a && l <= b).length }));
+  const expired = groups.reduce((a, g) => a + g.expired, 0), likelyReal = groups.reduce((a, g) => a + g.likelyReal, 0);
+  const precise = groups.filter((g) => g.precision >= 0.5), noisy = groups.filter((g) => g.precision < 0.25);
+  const deleted = groups.reduce((a, g) => a + g.deleted, 0);
+  const by = new Map<string, number>();
+  reviewed.forEach((r) => by.set(r.triaged_by!, (by.get(r.triaged_by!) ?? 0) + 1));
+  const top3 = [...by.values()].sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0);
+  return {
+    groups, speed, expired, likelyReal, reviewedTotal: reviewed.length, maxLag: Math.max(...lags), withinWeek: pct(lags.filter((l) => l <= 7).length, lags.length),
+    precise: { labels: precise.map((g) => g.label), expired: precise.reduce((a, g) => a + g.expired, 0), likelyReal: precise.reduce((a, g) => a + g.likelyReal, 0) },
+    noisy: { labels: noisy.map((g) => g.label), deleted: noisy.reduce((a, g) => a + g.deleted, 0), share: pct(noisy.reduce((a, g) => a + g.deleted, 0), deleted) },
+    deleted, reviewers: by.size, legalSeats: users.filter((u) => u.role === 'Legal').length, top3Share: pct(top3, reviewed.length),
+  };
+}
+export function awaitingPatterns(s: Scope) {
+  const list = hearingsIn(s).filter(isAwaiting);
+  const owners = new Map<string, number>();
+  list.forEach((h) => owners.set(h.firm_id ?? 'inhouse', (owners.get(h.firm_id ?? 'inhouse') ?? 0) + 1));
+  const byOwner = [...owners].map(([id, count]) => ({ id, label: id === 'inhouse' ? 'In-house legal' : teamById.get(id)!.name, count, href: id === 'inhouse' ? null : `#/team/${id}` })).sort((a, b) => b.count - a.count);
+  const age = list.map((h) => TODAY - 2 - dayOf(h.date));
+  const defs: [string, number, number][] = [['Up to a week overdue', 0, 7], ['1 to 2 weeks', 8, 14], ['More than 2 weeks', 15, 999]];
+  return { total: list.length, byOwner, byAge: defs.map(([label, a, b]) => ({ label, count: age.filter((x) => x >= a && x <= b).length })), oldest: age.length ? Math.max(...age) : 0 };
+}
+export function dormantPatterns(s: Scope) {
+  const act = mattersIn(s).filter((m) => activeOn(m, DATA_END));
+  const list = act.filter((m) => isDormantAt(m, DATA_END));
+  const byUnit = BU_IDS.map((id) => { const a = act.filter((m) => m.bu === id), d = list.filter((m) => m.bu === id); return { id, label: teamById.get(id)!.name, count: d.length, share: pct(d.length, a.length), href: `#/team/${id}` }; }).filter((r) => r.count > 0);
+  const noCounsel = list.filter((m) => !m.firm_id).length;
+  const quiet = list.map((m) => DATA_END - lastActivityAt(m, DATA_END));
+  const defs: [string, number, number][] = [['3 to 6 months quiet', 90, 180], ['6 to 9 months', 181, 270], ['More than 9 months', 271, 9999]];
+  const mgr = new Map<string, number>();
+  list.forEach((m) => mgr.set(m.case_manager_id, (mgr.get(m.case_manager_id) ?? 0) + 1));
+  const top = [...mgr].sort((a, b) => b[1] - a[1])[0];
+  return { total: list.length, byUnit, noCounsel, noCounselShare: pct(noCounsel, list.length), byQuiet: defs.map(([label, a, b]) => ({ label, count: quiet.filter((x) => x >= a && x <= b).length })), topManager: top ? { id: top[0], name: userById.get(top[0])!.name, count: top[1] } : null };
+}
+export function aiCost(period: Period) {
+  const a = aiAdoption(ORG, period);
+  const rows = a.rows.map((r) => { const acted = Math.round(r.uses * r.actionRate); return { id: r.id, label: r.label, credits: r.credits, uses: r.uses, acted, perActed: acted ? r.credits / acted : null }; }).sort((x, y) => (y.perActed ?? 0) - (x.perActed ?? 0));
+  const oct = creditsByFeature(9);
+  const dil = oct.rows.find((r) => r.f === 'ai_diligence')!;
+  return { rows, octWithoutDiligence: oct.total - dil.credits, limit: account.monthly_ai_limit, diligenceUsers: diligenceByUser(9) };
+}
+export function alertFunnel(s: Scope, period: Period) {
+  const from = periodStart(period);
+  const allowed = new Set(usersIn(s).filter((u) => u.role === 'Business').map((u) => u.id));
+  const al = alerts.filter((a) => dayOf(a.sent_on) >= from && allowed.has(a.user_id));
+  return BU_IDS.map((id) => {
+    const x = al.filter((a) => userById.get(a.user_id)!.team_id === id);
+    const opened = x.filter((a) => a.opened_on !== null).length, viewed = x.filter((a) => a.case_viewed_on !== null).length;
+    const us = new Map<string, boolean>();
+    x.forEach((a) => us.set(a.user_id, (us.get(a.user_id) ?? false) || a.opened_on !== null));
+    return { id, label: teamById.get(id)!.name, short: teamById.get(id)!.short, sent: x.length, opened, viewed, unopenedShare: pct(x.length - opened, x.length), users: us.size, neverOpened: [...us.values()].filter((v) => !v).length, perUser: us.size ? x.length / us.size : 0, href: `#/team/${id}` };
+  }).filter((r) => r.sent > 0);
+}

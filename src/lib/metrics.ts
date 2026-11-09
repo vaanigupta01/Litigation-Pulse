@@ -55,7 +55,7 @@ export const DEFINITION_NOTES: Record<string, string> = {
   M04: 'Shown as the average of the last 7 daily checks, so small court types such as the Supreme Court (12 cases) are not reduced to whole-case steps.',
   M06: 'Computed the standard rolling way: each day, that day\'s users divided by the users of the 30 days ending that day, averaged over the last 30 days.',
   M08: 'Window: suggestions resolved in the last 90 days (triaged in the window, or expired in it after 90 untouched days).',
-  M13: 'Median over hearings in the period with an outcome recorded. Hearings still awaiting an update appear in M14.',
+  M13: 'Median over hearings in the period with an outcome recorded. Hearings still awaiting an update are counted under Hearings awaiting update.',
   M16: 'Base: the 33 Legal and Lawyer users active in the last 7 days.',
   M20: 'Window: the selected period.',
 };
@@ -73,4 +73,7 @@ export const WINDOW: Record<string, 'period' | string> = {
   U01: 'Last 8 weeks', U02: 'Latest 20 actions', U03: 'period',
 };
 /** Metrics with a fixed headline whose trend line still follows the period. */
-export const TREND_FOLLOWS_PERIOD = new Set(['M02', 'M04', 'M05', 'M12', 'M15', 'M19']);
+/** Fixed-number metrics whose chart card draws a line across the selected period. */
+export const CARD_LINE = new Set(['M12', 'M15', 'M19']);
+/** Fixed-number Pulse tiles whose sparkline spans the selected period. */
+export const TILE_LINE = new Set(['M02', 'M04', 'M05']);

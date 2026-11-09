@@ -24,7 +24,7 @@ export function MembersTable({ teamId }: { teamId: string }) {
     <div id="card-members" className="card overflow-hidden">
       <div className="flex items-baseline justify-between px-5 pb-2 pt-4">
         <h3 className="text-[15px] font-semibold">Members</h3>
-        <span className="text-[12px] text-muted">{rows.length} people · click a row to open their view</span>
+        <span className="text-[12px] text-muted">{rows.length} people</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-[13px]">

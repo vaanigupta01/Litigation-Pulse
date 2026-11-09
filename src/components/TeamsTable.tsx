@@ -6,11 +6,11 @@ import { pc } from './ui';
 
 type Key = 'name' | 'M01' | 'M02' | 'M10' | 'M11' | 'M22' | 'members';
 const COLS: { k: Key; label: string; sub: string; color: string }[] = [
-  { k: 'M01', label: 'Hearing close-out', sub: 'M01', color: 'hearing' },
-  { k: 'M02', label: 'Weekly active seats', sub: 'M02', color: 'adoption' },
-  { k: 'M10', label: 'Early capture', sub: 'M10', color: 'intake' },
-  { k: 'M11', label: 'Fields at day 14', sub: 'M11 avg of 5', color: 'enrich' },
-  { k: 'M22', label: 'Alert follow-through', sub: 'M22', color: 'value' },
+  { k: 'M01', label: 'Hearing close-out', sub: '', color: 'hearing' },
+  { k: 'M02', label: 'Weekly active seats', sub: '', color: 'adoption' },
+  { k: 'M10', label: 'Early capture', sub: '', color: 'intake' },
+  { k: 'M11', label: 'Fields at day 14', sub: 'avg of 5 fields', color: 'enrich' },
+  { k: 'M22', label: 'Alert follow-through', sub: '', color: 'value' },
 ];
 
 export function TeamsTable() {
@@ -63,7 +63,7 @@ export function TeamsTable() {
           </tbody>
         </table>
       </div>
-      <div className="border-t border-hairline px-4 py-2 text-[11px] text-muted">Click a row to open the team. Intake, enrichment and alert rates belong to business units, so counsel firms show a dash.</div>
+      <div className="border-t border-hairline px-4 py-2 text-[11px] text-muted">Intake, enrichment and alert rates belong to business units, so counsel firms show a dash.</div>
     </div>
   );
 }

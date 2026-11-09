@@ -1,6 +1,6 @@
 import { Command } from 'cmdk';
 import { motion } from 'motion/react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { go, useApp, type Lens } from '../app/state';
 import { account, teamById, userById } from '../lib/data';
 import { AS_OF_LABEL, type Period } from '../lib/dates';
@@ -47,16 +47,22 @@ function Seg<T extends string | number>({ value, options, onChange, label }: { v
   );
 }
 
+const LOGO = 'https://legistify.com/blogs/wp-content/uploads/2025/03/legistify-icon.svg';
+/** Legistify's icon, loaded from their site; falls back to a plain monogram if it cannot load. */
+function Logo() {
+  const [ok, setOk] = useState(true);
+  return ok ? <img src={LOGO} alt="Legistify" width={28} height={28} className="h-7 w-7 object-contain" onError={() => setOk(false)} /> : (
+    <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-ink" aria-hidden><span className="serif text-[19px] leading-none text-canvas">L</span></span>
+  );
+}
+
 export function TopBar() {
   const { period, setPeriod, lens, setLens, theme, toggleTheme, setSearchOpen, route } = useApp();
   return (
     <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
         <a href="#/org" className="flex shrink-0 items-center gap-2">
-          <span className="relative grid h-7 w-7 place-items-center rounded-[8px] bg-ink" aria-hidden>
-            <span className="serif text-[19px] leading-none text-canvas" style={{ marginTop: 1 }}>L</span>
-            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-canvas bg-hearing" />
-          </span>
+          <Logo />
           <span className="text-[15px] font-semibold tracking-tight">Litigation <span className="text-muted">·</span> PM Pulse</span>
           <span className="hidden rounded-md border border-hairline px-1.5 py-0.5 text-[10px] font-medium text-muted sm:inline">Legistify sample</span>
         </a>

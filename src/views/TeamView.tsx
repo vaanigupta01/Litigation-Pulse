@@ -3,6 +3,7 @@ import {
   AlertBars, AwaitingBars, CloseOutTrend, ContractBars, DormantArea, Dumbbell, EarlyCaptureBars, FirmByBu, FirmScatter, LagDistribution, SpendBars,
   StickinessBars, TtfvDots, WauBullets,
 } from '../charts/charts';
+import { AlertBreakdown, AwaitingBreakdown, DormantBreakdown } from '../charts/breakdowns';
 import { ChartCard } from '../components/ChartCard';
 import { MembersTable } from '../components/MembersTable';
 import { PulseRow } from '../components/Pulse';
@@ -46,24 +47,24 @@ export function TeamView({ id }: { id: string }) {
               <CloseOutTrend scope={s} height={240} />
             </ChartCard>
             {isFirm && lag && (
-              <ChartCard id="M13" className="lg:col-span-2" drillable scopeLabel={t.short} headline={<Head items={[[`${lag.medianLag.toFixed(1)} days`, 'median lag'], [pc(lag.share), 'of all hearings'], [pc(lag.onPlatform), 'of its cases touched by its lawyers']]} />}>
+              <ChartCard id="M13" className="lg:col-span-2" scopeLabel={t.short} headline={<Head items={[[`${lag.medianLag.toFixed(1)} days`, 'median lag'], [pc(lag.share), 'of all hearings'], [pc(lag.onPlatform), 'of its cases touched by its lawyers']]} />}>
                 <FirmScatter period={period} highlight={id} />
               </ChartCard>
             )}
             {isFirm && ext && (
               <>
-                <ChartCard id="M13" anchor="card-M13-bu" caption="Which business units' hearings does this firm carry?" drillable headline={<Head items={[[String(ext.byBu.reduce((a, b) => a + b.hearings, 0)), `hearings in ${period} days`]]} />} note="Hearings by owning business unit. Click a bar to open the unit.">
+                <ChartCard id="M13" anchor="card-M13-bu" title="Hearings by business unit" headline={<Head items={[[String(ext.byBu.reduce((a, b) => a + b.hearings, 0)), `hearings in ${period} days`]]} />}>
                   <FirmByBu firmId={id} period={period} />
                 </ChartCard>
-                <ChartCard id="M13" anchor="card-M13-lag" caption="How long after each hearing is the outcome recorded?" headline={<Head items={[[String(ext.recorded), 'outcomes recorded'], [String(ext.awaitingNow), 'still awaiting']]} />} note="Grey bars count as closed out (recorded by the second day after the hearing).">
+                <ChartCard id="M13" anchor="card-M13-lag" title="Days from hearing to recorded outcome" headline={<Head items={[[String(ext.recorded), 'outcomes recorded'], [String(ext.awaitingNow), 'still awaiting']]} />} note="Grey bars count as closed out (recorded by the second day after the hearing).">
                   <LagDistribution firmId={id} period={period} />
                 </ChartCard>
               </>
             )}
-            <ChartCard id="M14" drillable scopeLabel={t.short} headline={<Head items={[[String(aw.total), 'awaiting an update']]} />} note={isFirm ? 'Grouped by the in-house case manager who owns the case.' : undefined}>
+            <ChartCard id="M14" scopeLabel={t.short} more={<AwaitingBreakdown scope={s} />} headline={<Head items={[[String(aw.total), 'awaiting an update']]} />} note={isFirm ? 'Grouped by the in-house case manager who owns the case.' : undefined}>
               <AwaitingBars scope={s} />
             </ChartCard>
-            <ChartCard id="M15" scopeLabel={t.short} headline={<Head items={[[String(dm.count), `dormant (${pc(dm.share)})`]]} />}>
+            <ChartCard id="M15" scopeLabel={t.short} more={<DormantBreakdown scope={s} />} headline={<Head items={[[String(dm.count), `dormant (${pc(dm.share)})`]]} />}>
               <DormantArea scope={s} />
             </ChartCard>
           </div>
@@ -74,14 +75,14 @@ export function TeamView({ id }: { id: string }) {
         <>
           <SectionTitle id="intake" title="Intake and enrichment" purpose="Does this unit hear about new cases early, and do they get the data Insights needs" color="var(--intake)" />
           <div className="grid gap-4 lg:grid-cols-2">
-            <ChartCard id="M10" drillable scopeLabel={t.short} note="This unit in colour; the others for comparison."><EarlyCaptureBars highlight={id} /></ChartCard>
+            <ChartCard id="M10" scopeLabel={t.short}><EarlyCaptureBars highlight={id} /></ChartCard>
             <ChartCard id="M11" scopeLabel={t.short}><Dumbbell scope={s} /></ChartCard>
           </div>
           <SectionTitle id="value" title="Value" purpose="Do this unit's business users act on alerts, and is spend recorded" color="var(--value)" />
           <div className="grid gap-4 lg:grid-cols-3">
-            <ChartCard id="M22" drillable scopeLabel={t.short}><AlertBars period={period} highlight={id} /></ChartCard>
-            <ChartCard id="M23" drillable scopeLabel={t.short}><SpendBars highlight={id} /></ChartCard>
-            <ChartCard id="M24" drillable scopeLabel={t.short}><ContractBars highlight={id} /></ChartCard>
+            <ChartCard id="M22" scopeLabel={t.short} more={<AlertBreakdown scope={s} />}><AlertBars period={period} highlight={id} /></ChartCard>
+            <ChartCard id="M23" scopeLabel={t.short}><SpendBars highlight={id} /></ChartCard>
+            <ChartCard id="M24" scopeLabel={t.short}><ContractBars highlight={id} /></ChartCard>
           </div>
         </>
       )}
