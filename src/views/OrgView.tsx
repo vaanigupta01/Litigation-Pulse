@@ -1,3 +1,4 @@
+import { teamById } from '../lib/data';
 import { useApp } from '../app/state';
 import {
   AccuracyLine, AiQuadrant, AlertBars, AskDaily, AwaitingBars, CloseOutTrend, ContractBars, CreditRunway, DormantArea, Dumbbell, EarlyCaptureBars,
@@ -70,7 +71,7 @@ export function OrgView() {
             <ChartCard id="M02" headline={<Head items={[[pc(w.rate), `${w.active} of ${w.seats} seats`]]} />} note="A meaningful action means more than a login: recording, creating or updating something.">
               <WauBullets scope={ORG} />
             </ChartCard>
-            <ChartCard id="M04" headline={<Head items={[[pc(sync.worst.rate), `${sync.worst.court}s`], [pc(sync.failureRate, 1), 'sync runs failed']]} />}>
+            <ChartCard id="M04" note={`Read it as: on an average day this week, only ${pc(sync.worst.rate)} of ${sync.worst.court.toLowerCase()} cases showed hearing and order data refreshed from the court in the last 24 hours. The rest were at least a day old.`} headline={<Head items={[[pc(sync.worst.rate), `${sync.worst.court}s`], [pc(sync.failureRate, 1), 'sync runs failed']]} />}>
               <SyncBars />
             </ChartCard>
             <ChartCard id="M03" className="lg:col-span-2" headline={<Head items={[[`Day ${run.last.limitDay}`, 'October limit day'], [`Day ${run.prev.limitDay}`, 'September'], [`Day ${run.projected}`, 'November, projected']]} />} note={`When credits run out, every AI feature stops for the whole account until the 1st. November has used ${nf(run.current.used)} credits in ${run.current.lastDay} days.`}>
@@ -102,6 +103,10 @@ export function OrgView() {
           <Section id="enrich" grid="lg:grid-cols-3">
             <ChartCard id="M11" className="lg:col-span-2" headline={<Head items={[[pc(fc.rows.find((r) => r.id === 'exposure')!.day14), 'have exposure by day 14']]} />} note="Financials and Team & Counsel tabs in Insights describe only the cases with these fields.">
               <Dumbbell scope={ORG} />
+              <div className="mt-4 flex flex-wrap items-center gap-1.5 border-t border-hairline pt-3 text-[12px]">
+                <span className="text-muted">Open a unit (all 5 fields, average by day 14):</span>
+                {q.BU_IDS.map((id) => { const f = q.fieldCompleteness(q.teamScope(id)); const t = teamById.get(id)!; return <a key={id} href={`#/team/${id}`} className="rounded-full border border-hairline px-2.5 py-0.5 hover:border-enrich hover:text-ink"><span className="text-muted">{t.short}</span> <b className="num">{pc(f.avgDay14)}</b></a>; })}
+              </div>
             </ChartCard>
             <ChartCard id="M12" note="Above 90%, priority cannot help anyone choose what to work on.">
               <NumberSpark value={pc(dp.rate)} sub={`${dp.n} of ${dp.total} active cases still at the default "High"`} series={q.defaultPriorityTrend(period).map((s) => s.rate)} color="var(--enrich)" labels={[q.buckets(period)[0].label, 'now']} />
@@ -124,7 +129,7 @@ export function OrgView() {
             <ChartCard id="M16" className="lg:col-span-2" headline={<Head items={[[pc(octDil.share), 'of October credits on AI Diligence'], [pc(dil.actionRate), 'of its outputs acted on'], [String(ai.base), 'Legal and Lawyer users in the base']]} />} note="Bubble size is credits used in the period. AI Diligence is run in bulk by 3 people and rarely acted on.">
               <AiQuadrant period={period} />
             </ChartCard>
-            <ChartCard id="M17" headline={<Head items={[[String(Math.round(ask.avgBefore)), 'Ask AI queries a day before'], [String(Math.round(ask.avgAfter)), 'blocked attempts after'], [`−${pc(ask.drop)}`, '']]} />}>
+            <ChartCard id="M17" note="Each bar is one day in October and early November. Purple: answered queries. Grey: attempts blocked because the account had no credits left. Dashed lines: the daily average before the limit (40) and after it (3)." headline={<Head items={[[String(Math.round(ask.avgBefore)), 'Ask AI queries a day, on average, 1 to 18 Oct'], [String(Math.round(ask.avgAfter)), 'blocked attempts a day after'], [`−${pc(ask.drop)}`, 'after the limit']]} />}>
               <AskDaily />
             </ChartCard>
             <ChartCard id="M18" headline={<Head items={[[pc(rej.regenerate), 'regenerated'], [pc(rej.thumbs), 'thumbs-down']]} />}>
@@ -148,7 +153,7 @@ export function OrgView() {
             <ChartCard id="M23" drillable headline={<Head items={[[pc(sp.rate), `${sp.captured} of ${sp.total} active cases`]]} />} note="Share of active cases with a spend or invoice entry in the last 90 days.">
               <SpendBars />
             </ChartCard>
-            <ChartCard id="M24" className="lg:col-span-2" drillable headline={<Head items={[[pc(cs.rate), `${cs.contract} of ${cs.total} active cases`]]} />} note="Dealer, vendor, commercial and employment contract disputes. Sizes the case for linking litigation to contracts in CLM.">
+            <ChartCard id="M24" className="lg:col-span-2" drillable headline={<Head items={[[pc(cs.rate), `${cs.contract} of ${cs.total} active cases`]]} />} note="Counts cases that started from a contract: disputes with dealers, vendors, business partners or employees. If Legistify let a case link to its contract in Contract Management (CLM), this is how many cases that feature could serve.">
               <ContractBars />
             </ChartCard>
           </Section>

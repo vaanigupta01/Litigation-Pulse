@@ -1019,12 +1019,22 @@ const COST: Record<AiFeature, number> = { ask_ai: 2, case_summary: 3, file_summa
   // --- Ask AI and Codex: per-day user counts are tuned so rolling DAU/MAU lands on 29% and 4%.
   const askQueries = new Map<number, number>(); // day -> successful queries
   const askBlocked = new Map<number, number>();
+  // Daily counts vary (quieter weekends) but each month keeps its exact total: mp.ask a day on average
+  // before the limit, 3 blocked attempts a day on average after it.
+  const spreadTotal = (days: number[], total: number, salt: string, weekendDip: boolean) => {
+    const w = days.map((d) => (weekendDip ? (dow(d) === 6 ? 0.45 : dow(d) === 5 ? 0.7 : 1) : 1) * (0.78 + h01(salt + d) * 0.44));
+    const W = w.reduce((a, b) => a + b, 0);
+    const raw = w.map((x) => (x * total) / W);
+    const out = raw.map(Math.floor);
+    let left = total - out.reduce((a, b) => a + b, 0);
+    raw.map((x, i) => [x - Math.floor(x), i] as const).sort((a, b) => b[0] - a[0]).forEach(([, i]) => { if (left > 0) { out[i]++; left--; } });
+    return out;
+  };
   for (const mp of monthPlans) {
     const lastOk = mp.limit ? mp.start + mp.limit - 2 : mp.end; // last day with successful Ask AI
-    for (let d = mp.start; d <= mp.end; d++) {
-      if (d <= lastOk) askQueries.set(d, mp.ask);
-      else askBlocked.set(d, 3);
-    }
+    const okDays = range(mp.start, lastOk), blockedDays = lastOk < mp.end ? range(lastOk + 1, mp.end) : [];
+    spreadTotal(okDays, mp.ask * okDays.length, 'askq', true).forEach((n, i) => askQueries.set(okDays[i], Math.max(1, n)));
+    spreadTotal(blockedDays, 3 * blockedDays.length, 'askb', false).forEach((n, i) => askBlocked.set(blockedDays[i], Math.max(1, n)));
   }
   function askUserDays(a: number, c: number, seed: number): Map<number, string[]> {
     reseed(seed);

@@ -201,7 +201,9 @@ describe('5. AI credits', () => {
     expect(a.avgBefore).toBe(40);
     expect(a.avgAfter).toBe(3);
     expect(P(a.drop)).toBe(93);
-    expect(a.days.slice(18, 31).every((d) => d.ok === 0 && d.blocked === 3)).toBe(true);
+    expect(a.days.slice(18, 31).every((d) => d.ok === 0 && d.blocked > 0)).toBe(true);
+    expect(a.days.slice(18, 31).reduce((x, d) => x + d.blocked, 0)).toBe(39);
+    expect(a.days.slice(0, 18).reduce((x, d) => x + d.ok, 0)).toBe(720);
   });
   it('adoption and action rate (base 33)', () => {
     const a = S.aiAdoption(ORG, 30);

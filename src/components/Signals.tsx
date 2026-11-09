@@ -44,7 +44,7 @@ export function Signals() {
   return (
     <section aria-labelledby="signals-title" className="mesh -mx-4 rounded-[28px] px-4 pb-6 pt-6 sm:-mx-6 sm:px-6">
       <div className="mb-4 flex items-baseline justify-between gap-4">
-        <h2 id="signals-title" className="serif text-[28px] leading-tight">Today's three signals</h2>
+        <h2 id="signals-title" className="serif text-[36px] leading-tight" style={{ letterSpacing: '0.018em' }}>Today's three signals</h2>
         <span className="hidden text-[12px] text-muted sm:block">Each one links to its evidence and to the people behind it</span>
       </div>
       <div className="grid gap-4 lg:grid-cols-3">

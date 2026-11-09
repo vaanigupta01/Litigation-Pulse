@@ -26,14 +26,19 @@ export function Chip({ children, color, title }: { children: ReactNode; color?: 
     </span>
   );
 }
-export function Delta({ now, prev, unit = 'pp', invert = false, fmt }: { now: number; prev: number; unit?: 'pp' | 'n' | 'days'; invert?: boolean; fmt?: (d: number) => string }) {
+/** Change against a named comparison window. Says so when there is no earlier data to compare with. */
+export function Delta({ now, prev, unit = 'pp', invert = false, fmt, vs }: { now: number; prev: number | null; unit?: 'pp' | 'n' | 'days'; invert?: boolean; fmt?: (d: number) => string; vs?: string }) {
+  if (prev === null) return <span className="block text-[11px] leading-tight text-muted">No earlier data<br />to compare with</span>;
   const d = unit === 'pp' ? (now - prev) * 100 : now - prev;
   const good = invert ? d < 0 : d > 0;
-  const flat = Math.abs(d) < (unit === 'pp' ? 0.5 : 0.5);
+  const flat = Math.abs(d) < 0.5;
   const txt = fmt ? fmt(d) : unit === 'pp' ? `${d > 0 ? '+' : ''}${d.toFixed(0)} pts` : unit === 'days' ? `${d > 0 ? '+' : ''}${d} days` : `${d > 0 ? '+' : ''}${nf(d)}`;
   return (
-    <span className="num text-[12px] font-medium" style={{ color: flat ? 'var(--muted)' : good ? 'var(--good)' : 'var(--act)' }}>
-      {flat ? '→' : d > 0 ? '↑' : '↓'} {txt}
+    <span className="block leading-tight" title={unit === 'pp' ? 'Percentage points: the difference between two percentages' : undefined}>
+      <span className="num text-[12px] font-medium" style={{ color: flat ? 'var(--muted)' : good ? 'var(--good)' : 'var(--act)' }}>
+        {flat ? '→ no change' : `${d > 0 ? '↑' : '↓'} ${txt}`}
+      </span>
+      {vs && <span className="block text-[11px] text-muted">vs {vs}</span>}
     </span>
   );
 }
@@ -118,10 +123,19 @@ export function WindowChip({ id, period, compact }: { id: string; period: number
     );
   }
   const trend = TREND_FOLLOWS_PERIOD.has(id);
+  const label = w.charAt(0).toLowerCase() + w.slice(1);
   return (
-    <span title={`Defined on a fixed window, so the period toggle does not change this number${trend ? '. The trend line still spans the selected period.' : '.'}`} className="inline-flex items-center gap-1 rounded-md border border-dashed border-hairline px-1.5 py-0.5 text-[11px] text-muted whitespace-nowrap">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
-      Fixed: {w.charAt(0).toLowerCase() + w.slice(1)}{trend && !compact ? ' · trend follows period' : ''}
-    </span>
+    <>
+      <span title="The number is defined on a fixed window, so the period toggle does not change it." className="inline-flex items-center gap-1 rounded-md border border-dashed border-hairline px-1.5 py-0.5 text-[11px] text-muted whitespace-nowrap">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        {trend ? 'Number' : 'Fixed'}: {label}
+      </span>
+      {trend && (
+        <span title="The line shows how this number moved across the selected period." className="inline-flex items-center gap-1 rounded-md bg-ink px-1.5 py-0.5 text-[11px] font-medium text-canvas whitespace-nowrap">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden><path d="M3 17l6-6 4 4 8-8" /></svg>
+          Line: {compact ? `${period}d` : `last ${period} days`}
+        </span>
+      )}
+    </>
   );
 }

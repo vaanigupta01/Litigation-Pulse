@@ -93,18 +93,18 @@ export function PulseRow({ scope, period }: { scope: Scope; period: Period }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
       <PulseTile id="M01" big value={hasHearings ? pc(p.M01.value) : '—'} status={hasHearings ? p.M01.status : 'info'} target={0.8}
-        delta={hasHearings && <Delta now={p.M01.value} prev={p.M01.prev} />}
+        delta={hasHearings && <Delta now={p.M01.value} prev={p.M01.prev} vs={`previous ${period} days`} />}
         context={hasHearings ? <>{co.inhouse.total > 0 && co.counsel.total > 0 && <>In-house <b className="text-ink">{pc(co.inhouse.rate)}</b> · counsel <b className="text-ink">{pc(co.counsel.rate)}</b> · </>}{co.closed} of {co.total} hearings in {period} days · target 80%</> : 'No hearings for this team'}
         series={p.M01.series} orgTick={org && hasHearings ? { label: pc(org.M01.value), team: p.M01.value, org: org.M01.value, max: 1 } : undefined} />
-      <PulseTile id="M02" value={pc(p.M02.value)} status={p.M02.status} delta={<Delta now={p.M02.value} prev={p.M02.prev} />}
+      <PulseTile id="M02" value={pc(p.M02.value)} status={p.M02.status} delta={<Delta now={p.M02.value} prev={p.M02.prev} vs="previous week" />}
         context={<>{p.M02.wau.active} of {p.M02.wau.seats} seats active this week</>} series={p.M02.series}
         orgTick={org ? { label: pc(org.M02.value), team: p.M02.value, org: org.M02.value, max: 1 } : undefined} />
       <PulseTile id="M03" value={<>Day {p.M03.value}</>} status={p.M03.status} accountWide={!!org}
-        delta={<Delta now={p.M03.value} prev={p.M03.prev} unit="days" invert={false} fmt={(d) => `${Math.abs(d)} days earlier`} />}
+        delta={<Delta now={p.M03.value} prev={p.M03.prev} unit="days" invert={false} fmt={(d) => `${Math.abs(d)} days earlier`} vs="September" />}
         context={<>October limit of {nf(6000)} credits · September day {p.M03.prev} · November on course for day {p.M03.run.projected}</>} series={p.M03.series} />
-      <PulseTile id="M04" value={pc(p.M04.value)} status={p.M04.status} accountWide={!!org} delta={<Delta now={p.M04.value} prev={p.M04.prev} />}
-        context={<>{p.M04.sync.worst.court}s, the worst court type · High Courts {pc(p.M04.sync.byCourt.find((c) => c.court === 'High Court')!.rate)}</>} series={p.M04.series} target={0.95} />
-      <PulseTile id="M05" value={nf(p.M05.value)} status="info" delta={<Delta now={p.M05.value} prev={p.M05.prev} unit="n" />}
+      <PulseTile id="M04" value={pc(p.M04.value)} status={p.M04.status} accountWide={!!org} delta={<Delta now={p.M04.value} prev={p.M04.prev} vs="previous week" />}
+        context={<>Only {pc(p.M04.value)} of {p.M04.sync.worst.court.toLowerCase()} cases had data refreshed from the court in the last 24 hours (the worst court type). High Courts {pc(p.M04.sync.byCourt.find((c) => c.court === 'High Court')!.rate)}</>} series={p.M04.series} target={0.95} />
+      <PulseTile id="M05" value={nf(p.M05.value)} status="info" delta={<Delta now={p.M05.value} prev={p.M05.prev} unit="n" vs={`${period} days ago`} />}
         context={scope.kind === 'org' ? <>{p.M05.am.byBu.map((b) => `${b.short} ${b.count}`).join(' · ')}</> : isFirm ? <>Live cases assigned to this firm</> : <>Live cases this unit is responsible for</>} series={p.M05.series}
         orgTick={org && !isFirm ? { label: `${nf(Math.round(org.M05.value / 4))} per business unit`, team: p.M05.value, org: org.M05.value / 4, max: Math.max(p.M05.value, org.M05.value / 4) * 1.2 } : undefined} />
     </div>

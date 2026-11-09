@@ -144,10 +144,11 @@ export function TtfvDots({ scope }: { scope: Scope }) {
             <div className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full" style={{ left: `${(r.q1 / max) * 100}%`, width: `${Math.max(1, ((r.q3 - r.q1) / max) * 100)}%`, background: 'color-mix(in srgb, var(--adoption) 35%, transparent)' }} />
             <div className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface" style={{ left: `${(r.median / max) * 100}%`, background: r.median > 10 ? 'var(--adoption)' : 'var(--quiet)' }} />
           </div>
-          <span className="num text-right"><b>{r.median}</b><span className="text-muted"> {r.median === 1 ? 'day' : 'days'}</span></span>
+          <span className="num text-right leading-tight"><b>{r.median}</b><span className="text-muted"> {r.median === 1 ? 'day' : 'days'}</span>{Math.round(r.q1) !== Math.round(r.q3) && <span className="block text-[10px] text-muted">middle half {Math.round(r.q1)} to {Math.round(r.q3)}</span>}</span>
         </div>
       ))}
-      <div className="flex justify-between pl-[84px] pr-[108px] text-[11px] text-muted"><span>0</span><span>Line = middle half of people</span><span>{Math.round(max)} d</span></div>
+      <div className="flex justify-between pl-[84px] pr-[108px] text-[11px] text-muted"><span>0 days</span><span>{Math.round(max)} days</span></div>
+      <p className="pl-[84px] text-[11px] leading-snug text-muted"><b className="text-ink">Dot</b>: the typical person (median), half took less time and half took more. <b className="text-ink">Line</b>: where the middle half of people sit. A quarter of people were faster than its left end and a quarter slower than its right end.</p>
     </div>
   );
 }
@@ -188,12 +189,13 @@ export function PrecisionBars() {
     <div className="space-y-3">
       {[...p.rows].sort((a, b) => a.precision - b.precision).map((r) => (
         <div key={r.id} className="grid grid-cols-[136px_1fr_44px] items-center gap-3 text-[13px]">
-          <span className="leading-tight text-muted">{r.label}<br /><span className="text-[11px]">{nf(r.suggested)} suggested · {nf(r.reviewed)} reviewed</span></span>
+          <span className="leading-tight text-muted">{r.label}<br /><span className="text-[11px]"><b className="text-ink">{r.accepted}</b> real of <b className="text-ink">{r.reviewed}</b> reviewed · {nf(r.suggested)} suggested</span></span>
           <div className="relative"><Bar value={r.precision} max={1} color={r.precision < 0.25 ? 'var(--intake)' : 'var(--quiet)'} height={12} /><span className="absolute top-[-3px] h-[18px] w-px bg-ink/50" style={{ left: '25%' }} /></div>
           <span className="num text-right font-medium">{pc(r.precision)}</span>
         </div>
       ))}
       <div className="flex justify-between pl-[148px] text-[11px] text-muted"><span>| Alert line 25%</span><span>Overall {pc(p.overall)}</span></div>
+      <p className="text-[11px] leading-snug text-muted">Precision = suggestions accepted as real cases (added or mapped) ÷ suggestions someone reviewed. Brand names: 32 ÷ 180 = 18%. Suggestions nobody opened are left out.</p>
     </div>
   );
 }
@@ -383,6 +385,8 @@ export function AskDaily({ height = 220 }: { height?: number }) {
         <ReferenceLine x={a.limitLabel} stroke={t.ink} strokeDasharray="4 4" label={{ value: `Limit reached ${a.limitLabel}`, position: 'top', fill: t.ink, fontSize: 11 }} />
         <ReferenceLine x="1 Nov" stroke={t.hairline} label={{ value: 'Credits reset', position: 'top', fill: t.muted, fontSize: 10 }} />
         <Tooltip cursor={{ fill: t.hairline, fillOpacity: 0.4 }} content={<Tip render={(p) => ({ title: String(p.label), rows: [['Answered', String(p.ok), t.ai], ['Blocked attempts', String(p.blocked), t.muted]] })} />} />
+        <ReferenceLine segment={[{ x: data[0].label, y: a.avgBefore }, { x: data[a.limitLabelIdx - 1].label, y: a.avgBefore }]} stroke={t.ink} strokeWidth={2} strokeDasharray="6 3" />
+        <ReferenceLine segment={[{ x: data[a.limitLabelIdx].label, y: a.avgAfter }, { x: data[30].label, y: a.avgAfter }]} stroke={t.ink} strokeWidth={2} strokeDasharray="6 3" />
         <RBar dataKey="ok" stackId="s" fill={t.ai} radius={[0, 0, 0, 0]} {...anim} />
         <RBar dataKey="blocked" stackId="s" fill={t.quiet} radius={[4, 4, 0, 0]} {...anim} />
       </ComposedChart>
@@ -404,7 +408,7 @@ export function RejectionLines({ period, height = 220 }: { period: Period; heigh
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis domain={[0, 0.2]} tickFormatter={pctTick} {...axisProps(t)} ticks={[0, 0.05, 0.1, 0.15, 0.2]} />
         {model && <ReferenceLine x={model} stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Model update 14 Sep', position: 'insideTopLeft', fill: t.ink, fontSize: 11 }} />}
-        <ReferenceLine y={0.1} stroke={t.muted} strokeDasharray="2 4" label={{ value: 'Alert 10%', position: 'insideBottomLeft', fill: t.muted, fontSize: 10 }} />
+        <ReferenceLine y={0.1} stroke={t.ai} strokeOpacity={0.7} strokeDasharray="2 4" label={{ value: 'Thumbs-down alert 10%', position: 'insideBottomLeft', fill: t.ai, fontSize: 10 }} />
         <Tooltip content={<Tip render={(p) => ({ title: ptTitle(period, p.week), rows: [['Regenerated', pc(p.regenerate as number, 1), t.muted], ['Thumbs-down', pc(p.thumbs as number, 1), t.ai]] })} />} />
         <Line dataKey="regenerate" stroke={t.muted} strokeOpacity={0.6} strokeWidth={1.5} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Regenerate ${pc(r.regenerate)}`} color={t.muted} />} />
         <Line dataKey="thumbs" stroke={t.ai} strokeWidth={2} dot={false} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`Thumbs-down ${pc(r.thumbs)}`} color={t.ai} />} />
@@ -419,17 +423,20 @@ export function AccuracyLine({ height = 200 }: { height?: number }) {
   const { period } = useApp();
   const a = { rows: q.accuracyTrend(period) };
   const n = a.rows.length;
+  const avg4 = q.summaryAccuracy().last4Avg;
+  const last4 = a.rows.slice(-4);
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={a.rows} margin={{ top: 16, right: 56, bottom: 0, left: -10 }}>
+      <LineChart data={a.rows} margin={{ top: 16, right: 96, bottom: 0, left: -10 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="week" {...axisProps(t)} interval="preserveStartEnd" minTickGap={28} />
         <YAxis domain={[0.85, 0.95]} tickFormatter={pctTick} {...axisProps(t)} ticks={[0.86, 0.88, 0.9, 0.92, 0.94]} />
         <ReferenceLine y={0.9} stroke={t.ink} strokeDasharray="4 4" label={{ value: 'Target 90%', position: 'insideTopLeft', fill: t.muted, fontSize: 11 }} />
         <ReferenceLine y={0.88} stroke={t.muted} strokeDasharray="2 4" label={{ value: 'Alert 88%', position: 'insideBottomLeft', fill: t.muted, fontSize: 10 }} />
         {a.rows.some((r) => r.week === '14 Sep') && <ReferenceLine x="14 Sep" stroke={t.hairline} label={{ value: 'Model update', position: 'insideBottomRight', fill: t.muted, fontSize: 10 }} />}
+        {last4.length === 4 && <ReferenceLine segment={[{ x: last4[0].week, y: avg4 }, { x: last4[3].week, y: avg4 }]} stroke={t.ai} strokeWidth={3} strokeOpacity={0.35} />}
         <Tooltip content={<Tip render={(p) => ({ title: `Week of ${p.week}`, rows: [['Accuracy', pc(p.accuracy as number, 1), t.ai], ['Summaries graded', String(p.sample)]] })} />} />
-        <Line dataKey="accuracy" stroke={t.ai} strokeWidth={2} dot={{ r: 2.5, fill: t.ai, strokeWidth: 0 }} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={pc(a.rows[n - 1].accuracy, 1)} color={t.ai} />} />
+        <Line dataKey="accuracy" stroke={t.ai} strokeWidth={2} dot={{ r: 2.5, fill: t.ai, strokeWidth: 0 }} {...anim} label={(p) => <EndLabel x={p.x as number} y={p.y as number} index={p.index as number} count={n} text={`4-wk avg ${pc(avg4, 1)}`} color={t.ai} dy={-10} />} />
       </LineChart>
     </ResponsiveContainer>
   );

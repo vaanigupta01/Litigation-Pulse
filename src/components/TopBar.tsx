@@ -53,8 +53,9 @@ export function TopBar() {
     <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
         <a href="#/org" className="flex shrink-0 items-center gap-2">
-          <span className="grid h-7 w-7 place-items-center rounded-lg" style={{ background: 'conic-gradient(from 200deg, var(--intake), var(--enrich), var(--hearing), var(--ai), var(--value), var(--intake))' }}>
-            <span className="h-3 w-3 rounded-full bg-canvas" />
+          <span className="relative grid h-7 w-7 place-items-center rounded-[8px] bg-ink" aria-hidden>
+            <span className="serif text-[19px] leading-none text-canvas" style={{ marginTop: 1 }}>L</span>
+            <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-canvas bg-hearing" />
           </span>
           <span className="text-[15px] font-semibold tracking-tight">Litigation <span className="text-muted">·</span> PM Pulse</span>
           <span className="hidden rounded-md border border-hairline px-1.5 py-0.5 text-[10px] font-medium text-muted sm:inline">Legistify sample</span>

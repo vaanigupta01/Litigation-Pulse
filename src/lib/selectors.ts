@@ -374,7 +374,7 @@ export function askAfterLimit() {
   const before = days.slice(0, limitDay - 1), after = days.slice(limitDay - 1, 31);
   const avgBefore = before.reduce((a, r) => a + r.ok, 0) / before.length;
   const avgAfter = after.reduce((a, r) => a + r.ok + r.blocked, 0) / after.length;
-  return { days, limitDay, limitLabel: fmtDay(oct + limitDay - 1), avgBefore, avgAfter, drop: 1 - avgAfter / avgBefore };
+  return { days, limitDay, limitLabel: fmtDay(oct + limitDay - 1), limitLabelIdx: limitDay - 1, avgBefore, avgAfter, drop: 1 - avgAfter / avgBefore };
 }
 // M18
 export function rejection(period: Period) {
@@ -493,11 +493,11 @@ export function pulse(s: Scope, period: Period) {
   const sync = syncFreshness(), syncPrev = syncFreshness(true);
   const am = activeMatters(s), amPrev = activeMatters(s, DATA_END - period);
   return {
-    M01: { value: co.rate, prev: coPrev.rate, closeOut: co, series: closeOutTrend(s, period).map((x) => x.all), status: closeOutStatus(co.rate) },
+    M01: { value: co.rate, prev: coPrev.total ? coPrev.rate : null, closeOut: co, series: closeOutTrend(s, period).map((x) => x.all), status: closeOutStatus(co.rate) },
     M02: { value: w.rate, prev: wPrev.rate, wau: w, series: wauTrend(s, period).map((x) => x.rate), status: wauStatus(w.byRole) },
     M03: { value: run.last.limitDay!, prev: run.prev.limitDay!, run, series: run.byMonth.map((m) => m.limitDay ?? daysInMonth(2026, m.m) + 3), status: run.status },
     M04: { value: sync.worst.rate, prev: syncPrev.worst.rate, sync, series: syncTrend(period).map((x) => x.rate), status: sync.status },
-    M05: { value: am.count, prev: amPrev.count, am, series: activeMattersTrend(s, period).map((x) => x.count), status: 'info' as Status },
+    M05: { value: am.count, prev: DATA_END - period >= DATA_START - 1 ? amPrev.count : null, am, series: activeMattersTrend(s, period).map((x) => x.count), status: 'info' as Status },
   };
 }
 

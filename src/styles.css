@@ -101,7 +101,9 @@ body {
 .serif {
   font-family: var(--font-serif);
   font-weight: 400;
-  letter-spacing: -0.01em;
+  /* Instrument Serif is narrow; a touch of tracking keeps it readable at section-title sizes */
+  letter-spacing: 0.012em;
+  word-spacing: 0.04em;
 }
 .focus-ring:focus-visible,
 button:focus-visible,
