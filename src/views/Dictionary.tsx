@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Chip } from '../components/ui';
-import { DEFINITION_NOTES, LENS_LABEL, METRICS, SECTIONS, STAGE_COLOR, TIER_LABEL, USER_ONLY, stageOf, type Tier } from '../lib/metrics';
+import { BREAKDOWNS, DEFINITION_NOTES, LENS_LABEL, METRICS, SECTIONS, STAGE_COLOR, TIER_LABEL, USER_ONLY, stageOf, type Tier } from '../lib/metrics';
 
 export function Dictionary({ focus }: { focus?: string }) {
   const [text, setText] = useState('');
@@ -57,6 +57,21 @@ export function Dictionary({ focus }: { focus?: string }) {
           );
         })}
         {!rows.length && <p className="px-4 py-8 text-center text-[13px] text-muted">No metric matches.</p>}
+      </div>
+      <h2 className="serif mt-10 text-[28px]">"Break it down" panels</h2>
+      <p className="mt-1 max-w-2xl text-[14px] text-muted">Five cards on the dashboard open a second view inside the card. These are deeper cuts of the metric above them, computed from the same events, so they add no new metrics.</p>
+      <div className="card mt-3 overflow-x-auto">
+        <table className="w-full min-w-[640px] text-[13px]">
+          <thead className="border-b border-hairline bg-surface-2 text-left text-[12px] text-muted"><tr><th className="px-4 py-2 font-medium">Card</th><th className="px-4 py-2 font-medium">Question the panel answers</th><th className="px-4 py-2 font-medium">Why it is there</th></tr></thead>
+          <tbody>
+            {BREAKDOWNS.map((b) => (
+              <tr key={b.id} className="border-b border-hairline/60 align-top last:border-0">
+                <td className="px-4 py-2.5"><span className="mr-2 font-mono text-[12px] text-muted">{b.id}</span><span className="font-medium">{METRICS.find((m) => m.id === b.id)!.name}</span></td>
+                <td className="px-4 py-2.5">{b.question}</td><td className="px-4 py-2.5 text-muted">{b.why}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       <h2 className="serif mt-10 text-[28px]">User view only</h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-3">

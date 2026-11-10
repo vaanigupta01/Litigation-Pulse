@@ -29,6 +29,7 @@ export interface UserOnlyDef { id: string; name: string; question: string; chart
 export const SECTIONS = raw.sections as SectionDef[];
 export const METRICS = raw.metrics as MetricDef[];
 export const USER_ONLY = raw.user_only as UserOnlyDef[];
+export const BREAKDOWNS = raw.breakdowns as { id: string; question: string; why: string }[];
 export const metric = (id: string): MetricDef => METRICS.find((m) => m.id === id)!;
 
 export type Stage = 'pulse' | 'adoption' | 'intake' | 'enrich' | 'hearing' | 'ai' | 'value' | 'health';
@@ -52,8 +53,6 @@ export const lensMatches = (lens: 'all' | 'business' | 'tech', l: LensKey) => le
  */
 export const DEFINITION_NOTES: Record<string, string> = {
   M01: 'Lag is counted from the start of the hearing day. "Within 2 days" means recorded by the end of the second calendar day after the hearing, so a 2.6-day lag still counts as closed out.',
-  M04: 'Shown as the average of the last 7 daily checks, so small court types such as the Supreme Court (12 cases) are not reduced to whole-case steps.',
-  M06: 'Computed the standard rolling way: each day, that day\'s users divided by the users of the 30 days ending that day, averaged over the last 30 days.',
   M08: 'Window: suggestions resolved in the last 90 days (triaged in the window, or expired in it after 90 untouched days).',
   M13: 'Median over hearings in the period with an outcome recorded. Hearings still awaiting an update are counted under Hearings awaiting update.',
   M16: 'Base: the 33 Legal and Lawyer users active in the last 7 days.',
