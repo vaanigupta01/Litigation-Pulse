@@ -55,7 +55,7 @@
       "chart": "Weekly line against an 80% target band, split into in-house and counsel-owned hearings",
       "chart_why": "A trend against a target shows direction and gap at once; the split shows where the gap comes from without a second chart.",
       "definition": "Share of hearings whose date has passed in the period that have an outcome or next step recorded within 2 calendar days.",
-      "formula": "count(hearings with hearing_outcome_recorded.lag_days <= 2) / count(hearings with hearing_date in period and hearing_date <= today - 2)",
+      "formula": "count(hearings with date(hearing_outcome_recorded) - hearing_date <= 2 days) / count(hearings with hearing_date in period and hearing_date <= today - 2)",
       "events": "hearing_synced, hearing_outcome_recorded {lag_days, updater_role, firm_id}",
       "refresh": "Daily, 06:00 IST",
       "alert": "Below 65% for 2 consecutive weeks",
@@ -111,7 +111,7 @@
       "decision": "Low freshness for a court type sends engineering to fix that scraper first, ranked by how many active cases depend on it.",
       "chart": "Horizontal bars by court type with a 95% target line",
       "chart_why": "Court types are categories with very different reliability; sorted bars rank where to fix first.",
-      "definition": "Share of active cases whose court data synced successfully in the last 24 hours, by court type.",
+      "definition": "Share of active cases whose court data synced successfully in the last 24 hours, by court type, averaged over the last 7 daily checks.",
       "formula": "count(active cases with court_sync_run.status = success in last 24h) / count(active cases), by court_type",
       "events": "court_sync_run {court_type, court_id, status, records_changed}",
       "refresh": "Hourly",
@@ -149,8 +149,8 @@
       "decision": "High-traffic, low-stickiness features get UX work; features under 5% become candidates to merge, move or retire.",
       "chart": "Sorted horizontal bars of DAU/MAU per feature, with features under 5% marked",
       "chart_why": "One measure across many features is a ranking, so sorted bars read fastest; the 5% marker shows the cut.",
-      "definition": "Average daily users of a feature divided by its monthly users, over the last 30 days.",
-      "formula": "avg(daily distinct users of feature) / distinct users of feature in 30 days",
+      "definition": "Daily users of a feature divided by its users in the trailing 30 days, averaged over the period (rolling DAU ÷ MAU).",
+      "formula": "avg over days(distinct users of feature that day / distinct users of feature in the 30 days ending that day)",
       "events": "feature_used {feature}",
       "refresh": "Daily",
       "alert": "None",
@@ -282,7 +282,7 @@
       "decision": "A slow, high-volume firm gets an escalation through the GC, an email-reply update option, or reallocation of new matters.",
       "chart": "Scatter: median update lag (x) against on-platform activity (y), bubble size = hearings in period",
       "chart_why": "Three attributes per firm at once; the scatter puts the problem firm alone in one corner.",
-      "definition": "Per firm, the median days between a hearing and its recorded outcome; on-platform activity = share of the firm's assigned cases with any action by its lawyers in 30 days.",
+      "definition": "Per firm, the median days between a hearing and its recorded outcome, counted from the start of the hearing day; on-platform activity = share of the firm's assigned cases with any action by its lawyers in 30 days.",
       "formula": "median(hearing_outcome_recorded.lag_days) by firm; count(cases with firm action in 30d) / count(firm cases)",
       "events": "hearing_outcome_recorded {firm_id, lag_days}, any action by role = Lawyer",
       "refresh": "Daily",
@@ -577,6 +577,33 @@
       "question": "Is this person above or below their team on the key rates?",
       "chart": "Small bars with a team-median tick for M01, M11, M14, M16",
       "chart_why": "A tick on each bar compares without a second chart."
+    }
+  ],
+  "breakdowns": [
+    {
+      "id": "M08",
+      "question": "What is in the expired pile, and how soon do reviews happen?",
+      "why": "Shows whether expired suggestions were noise or missed cases, which decides between reviewing more and ranking better."
+    },
+    {
+      "id": "M14",
+      "question": "Whose hearings are they, and how long have they waited?",
+      "why": "Separates one firm's backlog from a general habit, and shows how stale the oldest items are."
+    },
+    {
+      "id": "M15",
+      "question": "Which units hold them, and how long have they been quiet?",
+      "why": "Shows whether dormancy comes from missing counsel or from neglect, which need different fixes."
+    },
+    {
+      "id": "M16",
+      "question": "How many credits does each used output cost, and who runs AI Diligence?",
+      "why": "Turns trust into cost, so pricing and model choices can be made per feature."
+    },
+    {
+      "id": "M22",
+      "question": "Where do alerts drop: sent, opened, or case viewed?",
+      "why": "Shows whether to fix the alert itself or the case page it leads to."
     }
   ]
 }
