@@ -1,5 +1,6 @@
 import { useApp, useTokens } from '../app/state';
 import { CloseOutTrend, Dumbbell } from '../charts/charts';
+import { OwnerTable } from '../charts/owners';
 import { ChartCard } from '../components/ChartCard';
 import { LevelPath } from '../components/TopBar';
 import { pc, StatusPill } from '../components/ui';
@@ -43,7 +44,7 @@ function Timeline({ uid }: { uid: string }) {
   const items = q.timeline(uid, 20);
   if (!items.length) return <p className="text-[13px] text-muted">No activity on record.</p>;
   return (
-    <ol className="relative max-h-[420px] space-y-3 overflow-auto pr-2">
+    <Fill><ol className="relative space-y-3 pr-2">
       <span className="absolute bottom-2 left-[5px] top-2 w-px bg-hairline" aria-hidden />
       {items.map((x, i) => (
         <li key={i} className="relative flex gap-3 pl-0">
@@ -54,8 +55,13 @@ function Timeline({ uid }: { uid: string }) {
           </div>
         </li>
       ))}
-    </ol>
+    </ol></Fill>
   );
+}
+
+/** A list that takes the height of its row (set by the chart beside it) and scrolls inside. */
+function Fill({ children }: { children: React.ReactNode }) {
+  return <div className="relative h-full min-h-[240px]"><div className="absolute inset-0 overflow-auto">{children}</div></div>;
 }
 
 function Compare({ label, value, median, fmt, max, lowerBetter }: { label: string; value: number | null; median: number; fmt: (x: number) => string; max: number; lowerBetter?: boolean }) {
@@ -79,7 +85,8 @@ function Compare({ label, value, median, fmt, max, lowerBetter }: { label: strin
 }
 
 export function UserView({ id }: { id: string }) {
-  const { period } = useApp();
+  const { period, openSearch } = useApp();
+  const dflt = q.defaultPerson();
   const u = userById.get(id);
   if (!u) return <NotFound />;
   const team = teamById.get(u.team_id)!;
@@ -93,7 +100,16 @@ export function UserView({ id }: { id: string }) {
   return (
     <div>
       <header className="pb-6 pt-4">
-        <LevelPath level="user" teamHref={`#/team/${team.id}`} />
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <LevelPath level="user" teamHref={`#/team/${team.id}`} />
+          <div className="mb-3 flex flex-wrap items-center gap-3 text-[12px] text-muted">
+            {dflt.id === id && <span>Shown first because {u.name.split(' ')[0]} has the most hearings awaiting update ({dflt.awaiting})</span>}
+            <button onClick={() => openSearch('user')} className="flex items-center gap-1.5 rounded-full border border-hairline bg-surface px-3 py-1 font-medium text-ink hover:bg-canvas">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 11l2.5 2.5L22 11" /></svg>
+              Choose another person
+            </button>
+          </div>
+        </div>
         <div className="card flex flex-col gap-4 p-6 sm:flex-row sm:items-center">
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-[22px] font-semibold text-surface" style={{ background: `var(--${u.role === 'Lawyer' ? 'hearing' : u.role === 'Legal' ? 'enrich' : u.role === 'Admin' ? 'ai' : 'value'})` }}>
             {u.name.replace('Adv. ', '').split(' ').map((p) => p[0]).join('').slice(0, 2)}
@@ -141,6 +157,11 @@ export function UserView({ id }: { id: string }) {
             <CloseOutTrend scope={userScope(id)} height={220} />
           </ChartCard>
         )}
+        {isOps && k.hearings > 0 && (
+          <ChartCard id="M13" title={u.role === 'Legal' ? 'Hearings by owner' : 'Hearings and close-out'} anchor="card-owners" note={u.role === 'Legal' ? 'Whose job it was to report each hearing on this person\'s cases.' : undefined}>
+            <OwnerTable scope={userScope(id)} />
+          </ChartCard>
+        )}
         <ChartCard id="M16" title="AI usage by feature">
           {ai.length ? (
             <table className="w-full text-[13px]">
@@ -174,14 +195,14 @@ function AwaitingList({ uid }: { uid: string }) {
   return (
     <ChartCard id="M14"  scopeLabel={`${list.length} open`}>
       {list.length ? (
-        <ul className="max-h-[360px] divide-y divide-hairline overflow-auto text-[13px]">
+        <Fill><ul className="divide-y divide-hairline pr-2 text-[13px]">
           {list.map((h) => (
             <li key={h.id} className="flex items-center justify-between gap-3 py-2">
               <div className="min-w-0"><div className="truncate text-ink">{h.title}</div><div className="text-[11px] text-muted">Hearing {fmtDay(dayOf(h.date))} · owner: {h.firm}</div></div>
               <span className="num shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium" style={{ color: h.overdue > 7 ? 'var(--act)' : 'var(--watch)', background: `color-mix(in srgb, var(--${h.overdue > 7 ? 'act' : 'watch'}) 12%, transparent)` }}>{h.overdue} {h.overdue === 1 ? 'day' : 'days'} overdue</span>
             </li>
           ))}
-        </ul>
+        </ul></Fill>
       ) : <p className="text-[13px] text-muted">Every past hearing has an outcome recorded.</p>}
     </ChartCard>
   );
@@ -190,14 +211,14 @@ function LawyerCases({ uid }: { uid: string }) {
   const list = q.lawyerCases(uid);
   return (
     <ChartCard id="M14" title="Assigned cases" scopeLabel={`${list.length} cases`}>
-      <ul className="max-h-[360px] divide-y divide-hairline overflow-auto text-[13px]">
+      <Fill><ul className="divide-y divide-hairline pr-2 text-[13px]">
         {list.map((c) => (
           <li key={c.id} className="flex items-center justify-between gap-3 py-2">
             <div className="min-w-0"><div className="truncate text-ink">{c.title}</div><div className="text-[11px] text-muted">{c.bu} · {c.court}{c.lastHearing ? ` · last hearing ${fmtDay(dayOf(c.lastHearing))}` : ''}</div></div>
             {c.awaiting ? <span className="num shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium" style={{ color: 'var(--act)', background: 'color-mix(in srgb, var(--act) 12%, transparent)' }}>{c.overdue} days overdue</span> : <span className="text-[11px] text-muted">Up to date</span>}
           </li>
         ))}
-      </ul>
+      </ul></Fill>
     </ChartCard>
   );
 }

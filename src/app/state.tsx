@@ -44,6 +44,9 @@ interface Ctx {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   searchOpen: boolean;
+  /** Level tab the Jump-to search opens on */
+  searchLevel: 'all' | 'user';
+  openSearch: (level?: 'all' | 'user') => void;
   setSearchOpen: (b: boolean) => void;
 }
 const AppCtx = createContext<Ctx | null>(null);
@@ -54,6 +57,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lens, setLensS] = useState<Lens>(() => readStore('lp.lens', 'all'));
   const [theme, setTheme] = useState<'light' | 'dark'>(() => readStore('lp.theme', 'light'));
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchLevel, setSearchLevel] = useState<'all' | 'user'>('all');
+  const openSearch = useCallback((level: 'all' | 'user' = 'all') => { setSearchLevel(level); setSearchOpen(true); }, []);
   useEffect(() => {
     const on = () => setRoute(parseHash(location.hash));
     addEventListener('hashchange', on);
@@ -67,7 +72,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setPeriod = useCallback((p: Period) => { setPeriodS(p); writeStore('lp.period', p); }, []);
   const setLens = useCallback((l: Lens) => { setLensS(l); writeStore('lp.lens', l); }, []);
   const toggleTheme = useCallback(() => setTheme((t) => (t === 'light' ? 'dark' : 'light')), []);
-  const v = useMemo(() => ({ route, period, setPeriod, lens, setLens, theme, toggleTheme, searchOpen, setSearchOpen }), [route, period, setPeriod, lens, setLens, theme, toggleTheme, searchOpen]);
+  const v = useMemo(() => ({ route, period, setPeriod, lens, setLens, theme, toggleTheme, searchOpen, setSearchOpen, searchLevel, openSearch }), [route, period, setPeriod, lens, setLens, theme, toggleTheme, searchOpen, searchLevel, openSearch]);
   return <AppCtx.Provider value={v}>{children}</AppCtx.Provider>;
 }
 export function useApp() {

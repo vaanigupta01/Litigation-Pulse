@@ -79,13 +79,14 @@ export function PulseRow({ scope, period }: { scope: Scope; period: Period }) {
   const p = q.pulse(scope, period);
   const org = scope.kind === 'org' ? null : q.pulse(ORG, period);
   const hasHearings = p.M01.closeOut.total > 0;
+  const june = q.juneBaseline(scope);
   const isFirm = scope.kind === 'team' && scope.id.startsWith('firm-');
   const co = p.M01.closeOut;
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
       <PulseTile id="M01" big value={hasHearings ? pc(p.M01.value) : '—'} status={hasHearings ? p.M01.status : 'info'} target={0.8}
         delta={hasHearings && <Delta now={p.M01.value} prev={p.M01.prev} vs={`previous ${period} days`} />}
-        context={hasHearings ? <>{co.inhouse.total > 0 && co.counsel.total > 0 && <>In-house <b className="text-ink">{pc(co.inhouse.rate)}</b> · counsel <b className="text-ink">{pc(co.counsel.rate)}</b> · </>}{co.closed} of {co.total} hearings in {period} days · target 80%</> : 'No hearings for this team'}
+        context={hasHearings ? <>{co.inhouse.total > 0 && co.counsel.total > 0 && <>In-house <b className="text-ink">{pc(co.inhouse.rate)}</b> · counsel <b className="text-ink">{pc(co.counsel.rate)}</b> · </>}{co.closed} of {co.total} hearings in {period} days{!Number.isNaN(june.rate) && <> · <b className="text-ink">{pc(june.rate)}</b> in June</>} · target 80%</> : 'No hearings for this team'}
         series={p.M01.series} orgTick={org && hasHearings ? { label: pc(org.M01.value), team: p.M01.value, org: org.M01.value, max: 1 } : undefined} />
       <PulseTile id="M02" value={pc(p.M02.value)} status={p.M02.status} delta={<Delta now={p.M02.value} prev={p.M02.prev} vs="previous week" />}
         context={<>{p.M02.wau.active} of {p.M02.wau.seats} seats active this week</>} series={p.M02.series}

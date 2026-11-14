@@ -4,6 +4,7 @@ import {
   StickinessBars, TtfvDots, WauBullets,
 } from '../charts/charts';
 import { AlertBreakdown, AwaitingBreakdown, DormantBreakdown } from '../charts/breakdowns';
+import { SeatList } from '../charts/owners';
 import { ChartCard } from '../components/ChartCard';
 import { LevelPath } from '../components/TopBar';
 import { MembersTable } from '../components/MembersTable';
@@ -63,7 +64,7 @@ export function TeamView({ id }: { id: string }) {
                 </ChartCard>
               </>
             )}
-            <ChartCard id="M14" scopeLabel={t.short} more={<AwaitingBreakdown scope={s} />} headline={<Head items={[[String(aw.total), 'awaiting an update']]} />} note={isFirm ? 'Grouped by the in-house case manager who owns the case.' : undefined}>
+            <ChartCard id="M14" title={isFirm ? 'Hearings pending with this firm' : undefined} scopeLabel={isFirm ? undefined : t.short} more={<AwaitingBreakdown scope={s} />} headline={<Head items={[[String(aw.total), isFirm ? 'hearings with no outcome recorded' : 'awaiting an update']]} />} note={isFirm ? 'By in-house case manager, counting only hearings this firm owns. A manager\'s own page shows their total across all owners.' : undefined}>
               <AwaitingBars scope={s} />
             </ChartCard>
             <ChartCard id="M15" scopeLabel={t.short} more={<DormantBreakdown scope={s} />} headline={<Head items={[[String(dm.count), `dormant (${pc(dm.share)})`]]} />}>
@@ -91,7 +92,7 @@ export function TeamView({ id }: { id: string }) {
 
       <SectionTitle id="adoption" title="Adoption" purpose="Who in this team uses the module, and which features stick" color="var(--adoption)" />
       <div className="grid gap-4 lg:grid-cols-3">
-        <ChartCard id="M02" scopeLabel={t.short}><WauBullets scope={s} /></ChartCard>
+        <ChartCard id="M02" scopeLabel={t.short}><WauBullets scope={s} /><SeatList teamId={id} /></ChartCard>
         <ChartCard id="M06" scopeLabel={t.short}><StickinessBars scope={s} /></ChartCard>
         <ChartCard id="M07" scopeLabel={t.short}><TtfvDots scope={s} /></ChartCard>
       </div>

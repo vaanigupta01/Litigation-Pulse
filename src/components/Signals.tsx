@@ -8,11 +8,16 @@ import { Sparkline } from './ui';
 
 function MiniMehra() {
   const t = useTokens();
+  const { period } = useApp();
   const w = q.closeOutWeekly(ORG).filter((x) => x.n > 0);
+  const june = q.juneBaseline(ORG);
+  const now = q.closeOut(ORG, period).rate;
+  const share = q.firmLag(period).rows.find((r) => r.id === 'firm-mehra')!.share;
+  const fromTo = (a: number, b: number) => <div className="num text-[20px] font-semibold leading-none text-ink"><span className="text-muted">{Math.round(a * 100)}%</span> <span className="text-[14px] text-muted">→</span> {Math.round(b * 100)}%</div>;
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <div><div className="mb-1 text-[11px] text-muted">Close-out, all hearings</div><Sparkline data={w.map((x) => x.all)} color={t.hearing} height={40} target={0.8} min={0.4} max={0.9} /></div>
-      <div><div className="mb-1 text-[11px] text-muted">Mehra's share of hearings</div><Sparkline data={w.map((x) => x.mehraShare)} color={t.hearing} height={40} min={0} max={0.5} /></div>
+    <div className="grid grid-cols-2 gap-4">
+      <div>{fromTo(june.rate, now)}<div className="mb-1.5 mt-1 text-[11px] text-muted">Close-out, June to now</div><Sparkline data={w.map((x) => x.all)} color={t.hearing} height={36} target={0.8} min={0.4} max={0.9} /></div>
+      <div>{fromTo(june.mehraShare, share)}<div className="mb-1.5 mt-1 text-[11px] text-muted">Mehra's share of hearings</div><Sparkline data={w.map((x) => x.mehraShare)} color={t.hearing} height={36} min={0} max={0.5} /></div>
     </div>
   );
 }

@@ -505,6 +505,7 @@ export function pulse(s: Scope, period: Period) {
 export function signals(period: Period) {
   const lag = firmLag(period);
   const mehra = lag.rows.find((r) => r.id === 'firm-mehra')!;
+  const others = lag.rows.filter((r) => r.id !== 'firm-mehra');
   const mehraCo = closeOut(teamScope('firm-mehra'), period);
   const run = creditRunway();
   const octCredits = creditsByFeature(9);
@@ -519,7 +520,7 @@ export function signals(period: Period) {
     {
       id: 'counsel', stage: 'hearing' as const, metric: 'M13',
       headline: `${mehra.name} closes only ${pd(mehraCo.rate)}% of hearings on time and carries ${pd(mehra.share)}% of them`,
-      detail: `Its median update lag is ${mehra.medianLag.toFixed(1)} days against 1.8 to 2.6 for other firms. Since taking over the dealer disputes on 1 Aug, it has pulled account close-out from 72% in June to ${pd(closeOut(ORG, period).rate)}%.`,
+      detail: `Its median update lag is ${mehra.medianLag.toFixed(1)} days against ${Math.min(...others.map((r) => r.medianLag)).toFixed(1)} to ${Math.max(...others.map((r) => r.medianLag)).toFixed(1)} for other firms. Since taking over the dealer disputes on 1 Aug, it has pulled account close-out from ${pd(juneBaseline(ORG).rate)}% in June to ${pd(closeOut(ORG, period).rate)}%.`,
       drill: { label: 'Open Mehra & Associates', href: '#/team/firm-mehra' }, showMe: 'M13',
     },
     {
@@ -820,4 +821,30 @@ export function alertFunnel(s: Scope, period: Period) {
     x.forEach((a) => us.set(a.user_id, (us.get(a.user_id) ?? false) || a.opened_on !== null));
     return { id, label: teamById.get(id)!.name, short: teamById.get(id)!.short, sent: x.length, opened, viewed, unopenedShare: pct(x.length - opened, x.length), users: us.size, neverOpened: [...us.values()].filter((v) => !v).length, perUser: us.size ? x.length / us.size : 0, href: `#/team/${id}` };
   }).filter((r) => r.sent > 0);
+}
+
+
+// ------------------------------------------------------------------ baselines, owners, seats
+/** June, before Mehra & Associates took over the Sales dealer disputes: the "before" for the close-out story. */
+export function juneBaseline(s: Scope) {
+  const w = closeOutWeekly(s).filter((x) => x.week.endsWith('Jun') && x.n > 0);
+  const n = w.reduce((a, x) => a + x.n, 0);
+  return { n, rate: n ? w.reduce((a, x) => a + (x.all ?? 0) * x.n, 0) / n : NaN, mehraShare: n ? w.reduce((a, x) => a + (x.mehraShare ?? 0) * x.n, 0) / n : NaN };
+}
+/** Hearings in the period by who owns them: in-house legal and each counsel firm, with on-time counts. */
+export function hearingsByOwner(s: Scope, period: Period) {
+  const hs = hearingsIn(s).filter((h) => eligible(h, periodStart(period), DATA_END));
+  const row = (id: string, label: string, x: Hearing[], href: string | null) => {
+    const closed = x.filter(isClosedOut).length;
+    return { id, label, href, hearings: x.length, closed, rate: pct(closed, x.length), share: pct(x.length, hs.length), medianLag: median(x.filter((h) => h.lag_days !== null).map((h) => h.lag_days!)), awaiting: x.filter(isAwaiting).length };
+  };
+  const rows = [row('inhouse', 'In-house legal', hs.filter((h) => h.owner_type === 'inhouse'), null), ...FIRM_IDS.map((id) => row(id, teamById.get(id)!.name, hs.filter((h) => h.firm_id === id), `#/team/${id}`))].filter((r) => r.hearings > 0);
+  const closed = hs.filter(isClosedOut).length;
+  return { rows: rows.sort((a, b) => b.hearings - a.hearings), total: hs.length, closed, rate: pct(closed, hs.length) };
+}
+/** The person the People link opens: whoever has the most hearings awaiting update. */
+export const defaultPerson = () => { const a = awaiting(ORG); return { id: a.max.id, name: a.max.name, awaiting: a.max.total }; };
+export function seats(teamId: string) {
+  return users.filter((u) => u.team_id === teamId).map((u) => ({ id: u.id, name: u.name, role: u.role, lastActive: u.last_active, daysAgo: u.last_active ? TODAY - dayOf(u.last_active) : null, active: isWeeklyActive(u.id) }))
+    .sort((a, b) => (b.daysAgo ?? 9999) - (a.daysAgo ?? 9999));
 }

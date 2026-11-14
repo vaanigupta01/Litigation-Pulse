@@ -6,6 +6,7 @@ import {
   TtfvDots, WauBullets, ZeroResults,
 } from '../charts/charts';
 import { AiCostBreakdown, AlertBreakdown, AwaitingBreakdown, DormantBreakdown, IntakeBreakdown } from '../charts/breakdowns';
+import { OwnerTable } from '../charts/owners';
 import { ChartCard } from '../components/ChartCard';
 import { PulseRow } from '../components/Pulse';
 import { SectionChips, SectionNav } from '../components/SectionNav';
@@ -116,8 +117,9 @@ export function OrgView() {
           </Section>
 
           <Section id="hearing">
-            <ChartCard id="M13" className="lg:col-span-2" headline={<Head items={[[`${mehra.medianLag.toFixed(1)} days`, `${mehra.name} median lag`], [pc(mehra.share), 'of hearings'], [pc(mehra.onPlatform), 'of its cases touched by its lawyers']]} />} note={`In-house hearings: median ${lag.inhouse.medianLag.toFixed(1)} days. Bubble size is hearings in the period.`}>
+            <ChartCard id="M13" className="lg:col-span-2" headline={<Head items={[[`${mehra.medianLag.toFixed(1)} days`, `${mehra.name} median lag`], [pc(mehra.share), 'of hearings'], [pc(mehra.onPlatform), 'of its cases touched by its lawyers']]} />} note="Bubble size is hearings in the period.">
               <FirmScatter period={period} />
+              <div className="mt-4 border-t border-hairline pt-4"><OwnerTable scope={ORG} /></div>
             </ChartCard>
             <ChartCard id="M14" headline={<Head items={[[String(aw.total), 'awaiting an update']]} />} note="Colour: counsel-owned hearings. Grey: in-house." more={<AwaitingBreakdown scope={ORG} />}>
               <AwaitingBars scope={ORG} />

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { go, useApp, type Lens } from '../app/state';
 import { account, teamById, userById } from '../lib/data';
 import { AS_OF_LABEL, type Period } from '../lib/dates';
-import { searchIndex, type Level } from '../lib/selectors';
+import { defaultPerson, searchIndex, type Level } from '../lib/selectors';
 import type { Role } from '../lib/types';
 
 function crumbs(route: ReturnType<typeof useApp>['route']) {
@@ -58,7 +58,7 @@ function Logo() {
 }
 
 export function TopBar() {
-  const { period, setPeriod, lens, setLens, theme, toggleTheme, setSearchOpen, route } = useApp();
+  const { period, setPeriod, lens, setLens, theme, toggleTheme, openSearch, route } = useApp();
   return (
     <header className="sticky top-0 z-40 border-b border-hairline bg-canvas/85 backdrop-blur-md">
       <div className="mx-auto flex max-w-[1440px] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6">
@@ -71,10 +71,10 @@ export function TopBar() {
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Seg<Period> label="Period" value={period} onChange={setPeriod} options={[[30, '30d'], [90, '90d'], [180, '180d']]} />
           <Seg<Lens> label="Lens" value={lens} onChange={setLens} options={[['all', 'All'], ['business', 'Business'], ['tech', 'Tech & AI']]} />
-          <button onClick={() => setSearchOpen(true)} className="flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12px] text-muted hover:text-ink">
+          <button onClick={() => openSearch('all')} className="flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1.5 text-[12px] text-muted hover:text-ink">
             Jump to… <kbd className="hidden rounded border border-hairline px-1 font-mono text-[10px] sm:inline">⌘K</kbd>
           </button>
-          <a href={route.view === 'user' ? `#/user/${route.id}` : '#/user/ritika-sharma'} className="hidden text-[12px] font-medium text-muted hover:text-ink xl:inline">People</a>
+          <a href={route.view === 'user' ? `#/user/${route.id}` : `#/user/${defaultPerson().id}`} className="hidden text-[12px] font-medium text-muted hover:text-ink xl:inline">People</a>
           <a href="#/dictionary" className="text-[12px] font-medium text-muted hover:text-ink">Dictionary</a>
           <a href="#/about" className="text-[12px] font-medium text-muted hover:text-ink">About</a>
           <button onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`} className="grid h-8 w-8 place-items-center rounded-full border border-hairline bg-surface text-muted hover:text-ink">
@@ -94,20 +94,20 @@ export function TopBar() {
 }
 
 export function JumpTo() {
-  const { searchOpen, setSearchOpen } = useApp();
+  const { searchOpen, setSearchOpen, searchLevel, openSearch } = useApp();
   const items = useMemo(() => searchIndex(), []);
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
       const typing = (e.target as HTMLElement)?.closest('input, textarea, [contenteditable]');
-      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) { e.preventDefault(); setSearchOpen(true); }
+      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) { e.preventDefault(); openSearch('all'); }
     };
     addEventListener('keydown', on);
     return () => removeEventListener('keydown', on);
-  }, [setSearchOpen]);
+  }, [openSearch]);
   const inputRef = useRef<HTMLInputElement>(null);
   const [level, setLevel] = useState<'all' | Level>('all');
   const [role, setRole] = useState<'all' | Role>('all');
-  useEffect(() => { if (!searchOpen) { setLevel('all'); setRole('all'); } }, [searchOpen]);
+  useEffect(() => { setLevel(searchOpen ? searchLevel : 'all'); setRole('all'); }, [searchOpen, searchLevel]);
   const count = (l: Level) => items.filter((i) => i.level === l).length;
   const shown = items.filter((i) => (level === 'all' || i.level === level) && (level !== 'user' || role === 'all' || i.role === role));
   const tabs: ['all' | Level, string, number][] = [['all', 'All', items.length], ['org', 'Organisation', count('org')], ['team', 'Teams', count('team')], ['user', 'Users', count('user')]];
